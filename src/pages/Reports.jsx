@@ -103,7 +103,7 @@ export default function Reports() {
           Export Purchases CSV
         </Button>
         <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('expenses')}>
-          Export Expense CSV
+          Export Expenses CSV
         </Button>
       </Card>
     </DashboardLayout>

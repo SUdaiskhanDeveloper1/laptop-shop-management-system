@@ -49,7 +49,7 @@ export default function SummaryCards() {
 
       <Col xs={24} md={8}>
         <Card style={{...boxStyle, background:'#34d399'}}>
-          <h3 style={{color:'#fff'}}>Order Summary</h3>
+          <h3 style={{color:'#fff'}}>Orders Summary</h3>
           <div style={{marginTop:8}}>
             <Statistic title="Total Orders" value={totals.totalSalesCount || 0} valueStyle={{ color: '#fff' }} />
           </div>
