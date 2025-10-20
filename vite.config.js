@@ -14,10 +14,8 @@ export default defineConfig({
     port: 5173,
   },
   build: {
-    // ✅ Fixes the 500kb warning threshold
-    chunkSizeWarningLimit: 2000, // increase limit to 2MB
 
-    // ✅ Optional: better chunk splitting (improves load time)
+    chunkSizeWarningLimit: 2000, 
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -25,7 +23,7 @@ export default defineConfig({
             if (id.includes('antd')) return 'vendor-antd'
             if (id.includes('firebase')) return 'vendor-firebase'
             if (id.includes('react')) return 'vendor-react'
-            return 'vendor' // fallback for other packages
+            return 'vendor' 
           }
         },
       },
