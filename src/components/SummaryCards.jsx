@@ -35,7 +35,7 @@ export default function SummaryCards() {
 
       <Col xs={24} md={8}>
         <Card style={{...boxStyle, background:'#f43f5e'}}>
-          <h3 style={{color:'#fff'}}>Expense Summary</h3>
+          <h3 style={{color:'#fff'}}>Expenses Summary</h3>
           <div style={{marginTop:8}}>
             <Statistic title="Overall Expenditure" value={`Rs ${totals.totalExpenseAmount || 0}`} valueStyle={{ color: '#fff' }} />
           </div>
