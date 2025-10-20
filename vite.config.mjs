@@ -10,12 +10,14 @@ export default defineConfig({
       'react-dom': path.resolve('./node_modules/react-dom'),
     },
   },
+  define: {
+    'process.env': {}, // ✅ Fix for AntD + Firebase
+  },
   server: {
     port: 5173,
   },
   build: {
-
-    chunkSizeWarningLimit: 2000, 
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -23,7 +25,7 @@ export default defineConfig({
             if (id.includes('antd')) return 'vendor-antd'
             if (id.includes('firebase')) return 'vendor-firebase'
             if (id.includes('react')) return 'vendor-react'
-            return 'vendor' 
+            return 'vendor'
           }
         },
       },
