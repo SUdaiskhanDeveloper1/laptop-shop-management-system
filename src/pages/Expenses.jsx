@@ -119,13 +119,13 @@ export default function Expenses() {
             label="Description"
             rules={[{ required: true }]}
           >
-            <Input placeholder="e.g. Electricity bill, office supplies" />
+            <Input placeholder="e.g. Electricity bill,Shop Rent, office supplies, Lunch Cost..." />
           </Form.Item>
-          <Form.Item name="amount" label="Amount" rules={[{ required: true }]}>
-            <InputNumber style={{ width: "100%" }} />
+          <Form.Item   name="amount" label="Amount" rules={[{ required: true }]}>
+            <InputNumber placeholder="Enter The Total Amount" style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-            <Input placeholder="YYYY-MM-DD" />
+            <Input  placeholder="YYYY-MM-DD" />
           </Form.Item>
 
           <Form.Item>

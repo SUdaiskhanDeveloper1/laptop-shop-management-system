@@ -55,7 +55,7 @@ export default function Laptops() {
     },
     { title: "Qty", dataIndex: "quantity", key: "quantity" },
     {
-      title: "Purchase Price",
+      title: "T. Purchase Price",
       dataIndex: "purchasePrice",
       key: "purchasePrice",
     },

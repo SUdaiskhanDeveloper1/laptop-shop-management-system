@@ -6,7 +6,6 @@ import {
   Button,
   Space,
   Modal,
-  Descriptions,
   Form,
   Select,
   InputNumber,
@@ -28,13 +27,13 @@ export default function Sales() {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
- 
   async function onCreate(values) {
     try {
       const laptop = laptops.find((l) => l.id === values.laptopId);
       if (!laptop) throw new Error("Laptop not found");
 
-      const profitPer = values.sellingPrice - laptop.purchasePrice;
+      const costPerLaptop = laptop.purchasePrice / laptop.quantity;
+      const profitPer = values.sellingPrice - costPerLaptop;
       const profit = profitPer * values.quantity;
 
       await addSale({
@@ -54,13 +53,13 @@ export default function Sales() {
     }
   }
 
-  
   async function handleUpdate(values) {
     try {
       const laptop = laptops.find((l) => l.id === values.laptopId);
       if (!laptop) throw new Error("Laptop not found");
 
-      const profitPer = values.sellingPrice - laptop.purchasePrice;
+      const costPerLaptop = laptop.purchasePrice / laptop.quantity;
+      const profitPer = values.sellingPrice - costPerLaptop;
       const profit = profitPer * values.quantity;
 
       const saleDoc = doc(db, "sales", selected.id);
@@ -80,10 +79,8 @@ export default function Sales() {
     }
   }
 
-  
   async function handleDelete(id, laptopId, qtySold) {
     try {
-    
       const laptopDoc = doc(db, "laptops", laptopId);
       const laptop = laptops.find((l) => l.id === laptopId);
 
@@ -119,9 +116,9 @@ export default function Sales() {
       width: 60,
     },
     { title: "Laptop", dataIndex: "laptopGeneration" },
-    { title: "Qty", dataIndex: "quantity" },
-    { title: "Total", dataIndex: "totalSale" },
-    { title: "Profit", dataIndex: "profit" },
+    { title: "Sale Qty", dataIndex: "quantity" },
+    { title: "Total Amount", dataIndex: "totalSale" },
+    { title: "Total Profit", dataIndex: "profit" },
     {
       title: "Actions",
       render: (text, record) => (
@@ -145,7 +142,6 @@ export default function Sales() {
         <Table dataSource={sales || []} columns={columns} rowKey="id" />
       </Card>
 
-    
       <Modal
         title="Add Sale"
         open={addOpen}
@@ -154,7 +150,11 @@ export default function Sales() {
         centered
       >
         <Form form={form} onFinish={onCreate} layout="vertical">
-          <Form.Item name="laptopId" label="Laptop" rules={[{ required: true }]}>
+          <Form.Item
+            name="laptopId"
+            label="Laptop"
+            rules={[{ required: true }]}
+          >
             <Select
               options={laptops.map((l) => ({
                 label: `${l.brand} ${l.Generation} (qty:${l.quantity})`,
@@ -163,11 +163,19 @@ export default function Sales() {
             />
           </Form.Item>
 
-          <Form.Item name="quantity" label="Quantity" rules={[{ required: true }]}>
+          <Form.Item
+            name="quantity"
+            label="Quantity"
+            rules={[{ required: true }]}
+          >
             <InputNumber style={{ width: "100%" }} min={1} />
           </Form.Item>
 
-          <Form.Item name="sellingPrice" label="Selling Price" rules={[{ required: true }]}>
+          <Form.Item
+            name="sellingPrice"
+            label="Selling Price"
+            rules={[{ required: true }]}
+          >
             <InputNumber style={{ width: "100%" }} min={0} />
           </Form.Item>
 
@@ -179,7 +187,6 @@ export default function Sales() {
         </Form>
       </Modal>
 
-     
       <Modal
         title={`Sale Details`}
         open={viewOpen}
@@ -191,7 +198,11 @@ export default function Sales() {
         {selected && (
           <>
             <Form form={editForm} onFinish={handleUpdate} layout="vertical">
-              <Form.Item name="laptopId" label="Laptop" rules={[{ required: true }]}>
+              <Form.Item
+                name="laptopId"
+                label="Laptop"
+                rules={[{ required: true }]}
+              >
                 <Select
                   options={laptops.map((l) => ({
                     label: `${l.brand} ${l.Generation}`,
@@ -200,11 +211,19 @@ export default function Sales() {
                 />
               </Form.Item>
 
-              <Form.Item name="quantity" label="Quantity" rules={[{ required: true }]}>
+              <Form.Item
+                name="quantity"
+                label="Quantity"
+                rules={[{ required: true }]}
+              >
                 <InputNumber style={{ width: "100%" }} min={1} />
               </Form.Item>
 
-              <Form.Item name="sellingPrice" label="Selling Price" rules={[{ required: true }]}>
+              <Form.Item
+                name="sellingPrice"
+                label="Selling Price Per Item"
+                rules={[{ required: true }]}
+              >
                 <InputNumber style={{ width: "100%" }} min={0} />
               </Form.Item>
 
@@ -222,7 +241,11 @@ export default function Sales() {
                 <Popconfirm
                   title="Are you sure you want to delete this sale?"
                   onConfirm={() =>
-                    handleDelete(selected.id, selected.laptopId, selected.quantity)
+                    handleDelete(
+                      selected.id,
+                      selected.laptopId,
+                      selected.quantity
+                    )
                   }
                   okText="Yes"
                   cancelText="No"

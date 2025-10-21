@@ -89,11 +89,7 @@ export default function Purchases() {
     { title: "Laptop", dataIndex: "laptopBrand", key: "laptopBrand" },
     { title: "Supplier", dataIndex: "supplierName", key: "supplierName" },
     { title: "Qty", dataIndex: "quantity", key: "quantity" },
-    {
-      title: "Purchase Price",
-      dataIndex: "purchasePrice",
-      key: "purchasePrice",
-    },
+    
     {
       title: "Purchased Date",
       dataIndex: "createdAt",
