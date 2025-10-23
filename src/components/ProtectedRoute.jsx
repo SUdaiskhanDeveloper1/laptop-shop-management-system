@@ -18,7 +18,7 @@ export default function ProtectedRoute({ children }) {
           background: '#f9fafb'
         }}
       >
-        <Spin size="large" tip="Loading..." />
+        {/* <Spin size="large" tip="Loading..." /> */}
       </div>
     )
   }

@@ -6,7 +6,7 @@ export default function useCollectionRealtime(collectionName) {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    // console.log("Listening to:", collectionName);
+    
     const unsub = onSnapshot(
       collection(db, collectionName),
       (snapshot) => {
@@ -14,7 +14,7 @@ export default function useCollectionRealtime(collectionName) {
           id: doc.id,
           ...doc.data(),
         }));
-        // console.log("Fetched data:", list);
+        
         setData(list);
       },
       (error) => {

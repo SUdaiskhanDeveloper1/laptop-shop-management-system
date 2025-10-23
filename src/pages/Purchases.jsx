@@ -15,7 +15,7 @@ import {
   Input,
 } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
-import { addPurchase } from "../firebase/services"; 
+import { addPurchase } from "../firebase/services";
 import { updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import useCollectionRealtime from "../utils/useCollectionRealtime";
@@ -29,7 +29,6 @@ export default function Purchases() {
   const [editOpen, setEditOpen] = useState(false);
   const [form] = Form.useForm();
 
-  
   async function handleDelete(id) {
     try {
       await deleteDoc(doc(db, "purchases", id));
@@ -41,26 +40,22 @@ export default function Purchases() {
     }
   }
 
- 
   const handleView = (record) => {
     setSelected(record);
     setViewOpen(true);
   };
 
- 
   async function handleSave(values) {
     try {
       const laptop = laptops.find((l) => l.id === values.laptopId);
 
       if (selected) {
-        
         await updateDoc(doc(db, "purchases", selected.id), {
           ...values,
           laptopBrand: laptop?.brand || "",
         });
         message.success("Purchase updated successfully");
       } else {
-      
         await addPurchase({
           ...values,
           laptopBrand: laptop?.brand || "",
@@ -78,7 +73,6 @@ export default function Purchases() {
     }
   }
 
- 
   const columns = [
     {
       title: "#",
@@ -89,7 +83,7 @@ export default function Purchases() {
     { title: "Laptop", dataIndex: "laptopBrand", key: "laptopBrand" },
     { title: "Supplier", dataIndex: "supplierName", key: "supplierName" },
     { title: "Qty", dataIndex: "quantity", key: "quantity" },
-    
+
     {
       title: "Purchased Date",
       dataIndex: "createdAt",
@@ -128,10 +122,21 @@ export default function Purchases() {
           </Button>
         }
       >
-        <Table columns={columns} dataSource={purchases || []} rowKey="id" />
+        <Table
+          columns={columns}
+          dataSource={
+            purchases
+              ? [...purchases].sort(
+                  (a, b) =>
+                    new Date(b.createdAt?.toDate?.() || b.createdAt) -
+                    new Date(a.createdAt?.toDate?.() || a.createdAt)
+                )
+              : []
+          }
+          rowKey="id"
+        />
       </Card>
 
-      
       <Modal
         title={`Purchase Details`}
         open={viewOpen}
@@ -202,7 +207,6 @@ export default function Purchases() {
         )}
       </Modal>
 
-     
       <Modal
         title={selected ? "Update Purchase" : "Add Purchase"}
         open={editOpen}

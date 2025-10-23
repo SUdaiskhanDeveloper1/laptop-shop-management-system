@@ -10,48 +10,51 @@ export default function Dashboard() {
   const { data: purchases = [] } = useCollectionRealtime("purchases");
   const { data: expenses = [] } = useCollectionRealtime("expenses");
 
-  
   const todayStart = dayjs().startOf("day");
   const weekStart = dayjs().startOf("week");
 
+  const totalStock = laptops.reduce(
+    (sum, laptop) => sum + (laptop.quantity || 0),
+    0
+  );
 
-  const totalStock = laptops.reduce((sum, laptop) => sum + (laptop.quantity || 0), 0);
+  const isToday = (date) =>
+    dayjs(date?.toDate?.() || date).isAfter(todayStart);
+  const isThisWeek = (date) =>
+    dayjs(date?.toDate?.() || date).isAfter(weekStart);
 
-
-  const isToday = (date) => dayjs(date?.toDate?.() || date).isAfter(todayStart);
-  const isThisWeek = (date) => dayjs(date?.toDate?.() || date).isAfter(weekStart);
-
- 
   const todayProfit = sales
     .filter((sale) => isToday(sale.createdAt))
     .reduce((sum, sale) => sum + (sale.profit || 0), 0);
 
+ 
   const weekProfit = sales
-    .filter((sale) => isThisWeek(sale.createdAt))
+    .filter((sale) => {
+      const createdAt = sale.createdAt?.toDate?.() || sale.createdAt;
+      return dayjs(createdAt).isAfter(weekStart);
+    })
     .reduce((sum, sale) => sum + (sale.profit || 0), 0);
 
-  
   const expenseToday = expenses
     .filter((expense) => isToday(expense.createdAt))
     .reduce((sum, e) => sum + (e.amount || 0), 0);
 
-const totalPurchasesToday = purchases
-  .filter((purchase) =>
-    dayjs(purchase.createdAt?.toDate?.() || purchase.createdAt).isAfter(todayStart)
-  )
-  .reduce((s, it) => s + (it.purchasePrice * it.quantity || 0), 0);
-
+  const totalPurchasesToday = purchases
+    .filter((purchase) =>
+      dayjs(purchase.createdAt?.toDate?.() || purchase.createdAt).isAfter(
+        todayStart
+      )
+    )
+    .reduce((s, it) => s + (it.purchasePrice * it.quantity || 0), 0);
 
   const netProfitToday = todayProfit - expenseToday;
 
- 
   const formatValue = (num) =>
     typeof num === "number" && !isNaN(num) ? num.toLocaleString() : "0";
 
   return (
     <DashboardLayout>
       <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
-     
         <Col xs={24} sm={12} md={8} lg={8}>
           <Card
             style={{
@@ -69,7 +72,6 @@ const totalPurchasesToday = purchases
           </Card>
         </Col>
 
-      
         <Col xs={24} sm={12} md={8} lg={8}>
           <Card
             style={{
@@ -88,7 +90,6 @@ const totalPurchasesToday = purchases
           </Card>
         </Col>
 
-        
         <Col xs={24} sm={12} md={8} lg={8}>
           <Card
             style={{
@@ -107,7 +108,6 @@ const totalPurchasesToday = purchases
           </Card>
         </Col>
 
-       
         <Col xs={24} sm={12} md={8} lg={8}>
           <Card
             style={{
@@ -126,7 +126,6 @@ const totalPurchasesToday = purchases
           </Card>
         </Col>
 
-       
         <Col xs={24} sm={12} md={8} lg={8}>
           <Card
             style={{
@@ -145,7 +144,6 @@ const totalPurchasesToday = purchases
           </Card>
         </Col>
 
-        
         <Col xs={24} sm={12} md={8} lg={8}>
           <Card
             style={{
