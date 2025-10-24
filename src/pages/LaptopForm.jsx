@@ -30,7 +30,7 @@ export default function LaptopForm(){
           storage: data.storage || '',
           quantity: data.quantity || 0,
           purchasePrice: data.purchasePrice || 0,
-          sellingPrice: data.sellingPrice || 0,
+          supplierName: data.supplierName || '',
           accessories: data.accessories || []
         })
       }
@@ -49,7 +49,7 @@ export default function LaptopForm(){
         storage: values.storage || '',
         quantity: Number(values.quantity || 0),
         purchasePrice: Number(values.purchasePrice || 0),
-        sellingPrice: Number(values.sellingPrice || 0),
+        supplierName: values.supplierName || '',
         accessories: values.accessories || []
       }
       if (id) {
@@ -76,8 +76,8 @@ export default function LaptopForm(){
           {/* <Form.Item name="processor" label="Processor"><Input /></Form.Item> */}
           <Form.Item name="ram" label="RAM:"><Input /></Form.Item>
           <Form.Item name="storage" label="Storage:"><Input /></Form.Item>
-          <Form.Item name="purchasePrice" label="Purchase Price:"><InputNumber style={{width:'100%'}} min={0} /></Form.Item>
-          <Form.Item name="sellingPrice" label="Supplier Name:"><InputNumber style={{width:'100%'}} min={0} /></Form.Item>
+          <Form.Item name="purchasePrice" label="Total Purchase Price:"><InputNumber style={{width:'100%'}} min={0} /></Form.Item>
+          <Form.Item name="supplierName" label="Supplier Name:"><Input style={{width:'100%'}} /></Form.Item>
           <Form.Item name="quantity" label="Quantity:"><InputNumber style={{width:'100%'}} min={0} /></Form.Item>
           <Form.Item name="accessories" label="Accessories:"><AccessoryToggleList /></Form.Item>
           <Form.Item><Button htmlType="submit" type="primary" loading={loading}>Save</Button></Form.Item>

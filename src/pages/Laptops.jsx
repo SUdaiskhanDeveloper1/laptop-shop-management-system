@@ -54,14 +54,14 @@ export default function Laptops() {
     },
     { title: "Qty", dataIndex: "quantity", key: "quantity" },
     {
-      title: "Purchase Price",
+      title: "T.Purchase Price",
       dataIndex: "purchasePrice",
       key: "purchasePrice",
     },
     {
-      title: "Supplier",
-      dataIndex: "sellingPrice", 
-      key: "sellingPrice",
+      title: "Supplier Name",
+      dataIndex: "supplierName", 
+      key: "supplierName",
     },
 
     {
@@ -124,8 +124,8 @@ export default function Laptops() {
               <Descriptions.Item label="Purchase Price">
                 {selected.purchasePrice}
               </Descriptions.Item>
-              <Descriptions.Item label="Selling Price">
-                {selected.sellingPrice}
+              <Descriptions.Item label="Supplier Name">
+                {selected.supplierName || "—"}
               </Descriptions.Item>
 
               <Descriptions.Item label="Added On">

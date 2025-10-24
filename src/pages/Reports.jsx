@@ -82,7 +82,7 @@ export default function Reports() {
             <Statistic title="Total Expenses" value={totals.totalExpensesAmount.toFixed(2)} />
           </Card>
         </Col>
-        <Col span={6}>
+        {/* <Col span={6}>
           <Card>
             <Statistic
               title="Profit"
@@ -90,7 +90,7 @@ export default function Reports() {
               valueStyle={{ color: totals.profit >= 0 ? 'green' : 'red' }}
             />
           </Card>
-        </Col>
+        </Col> */}
       </Row>
 
       <Card style={{ marginTop: 24 }} title="Export Collections">
