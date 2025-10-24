@@ -21,7 +21,6 @@ export default function App(){
       <Route path="/laptops" element={<ProtectedRoute><Laptops/></ProtectedRoute>} />
       <Route path="/laptops/add" element={<ProtectedRoute><LaptopForm/></ProtectedRoute>} />
       <Route path="/laptops/edit/:id" element={<ProtectedRoute><LaptopForm/></ProtectedRoute>} />
-      <Route path="/purchases" element={<ProtectedRoute><Purchases/></ProtectedRoute>} />
       <Route path="/sales" element={<ProtectedRoute><Sales/></ProtectedRoute>} />
       <Route path="/suppliers" element={<ProtectedRoute><Suppliers/></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><Reports/></ProtectedRoute>} />

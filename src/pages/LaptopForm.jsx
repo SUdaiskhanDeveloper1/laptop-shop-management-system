@@ -71,15 +71,15 @@ export default function LaptopForm(){
     <DashboardLayout>
       <Card title={id ? 'Edit Laptop' : 'Add Laptop'}>
         <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{quantity:1, accessories:[]}}>
-          <Form.Item name="brand" label="Brand" rules={[{ required: false }]}><Input /></Form.Item>
-          <Form.Item name="Generation" label="Generation" rules={[{ required: false }]}><Input /></Form.Item>
-          <Form.Item name="processor" label="Processor"><Input /></Form.Item>
-          <Form.Item name="ram" label="RAM"><Input /></Form.Item>
-          <Form.Item name="storage" label="Storage"><Input /></Form.Item>
-          <Form.Item name="purchasePrice" label="Purchase Price"><InputNumber style={{width:'100%'}} min={0} /></Form.Item>
-          <Form.Item name="sellingPrice" label="Selling Price"><InputNumber style={{width:'100%'}} min={0} /></Form.Item>
-          <Form.Item name="quantity" label="Quantity"><InputNumber style={{width:'100%'}} min={0} /></Form.Item>
-          <Form.Item name="accessories" label="Accessories"><AccessoryToggleList /></Form.Item>
+          <Form.Item name="brand" label="Brand Name:" rules={[{ required: false }]}><Input /></Form.Item>
+          <Form.Item name="Generation" label="Generation & Processor:" rules={[{ required: false }]}><Input /></Form.Item>
+          {/* <Form.Item name="processor" label="Processor"><Input /></Form.Item> */}
+          <Form.Item name="ram" label="RAM:"><Input /></Form.Item>
+          <Form.Item name="storage" label="Storage:"><Input /></Form.Item>
+          <Form.Item name="purchasePrice" label="Purchase Price:"><InputNumber style={{width:'100%'}} min={0} /></Form.Item>
+          <Form.Item name="sellingPrice" label="Supplier Name:"><InputNumber style={{width:'100%'}} min={0} /></Form.Item>
+          <Form.Item name="quantity" label="Quantity:"><InputNumber style={{width:'100%'}} min={0} /></Form.Item>
+          <Form.Item name="accessories" label="Accessories:"><AccessoryToggleList /></Form.Item>
           <Form.Item><Button htmlType="submit" type="primary" loading={loading}>Save</Button></Form.Item>
         </Form>
       </Card>

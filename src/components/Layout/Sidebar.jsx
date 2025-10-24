@@ -10,7 +10,6 @@ export default function Sidebar(){
   const items = [
     { key: '/dashboard', icon: <DashboardOutlined />, label: <Link to="/dashboard">Dashboard</Link> },
     { key: '/laptops', icon: <LaptopOutlined />, label: <Link to="/laptops">Laptops</Link> },
-    { key: '/purchases', icon: <SwapOutlined />, label: <Link to="/purchases">Purchases</Link> },
     { key: '/sales', icon: <ShoppingOutlined />, label: <Link to="/sales">Sales</Link> },
     { key: '/suppliers', icon: <FileTextOutlined />, label: <Link to="/suppliers">Suppliers</Link> },
     { key: '/reports', icon: <FileTextOutlined />, label: <Link to="/reports">Reports</Link> },

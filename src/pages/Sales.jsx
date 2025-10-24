@@ -120,6 +120,15 @@ export default function Sales() {
     { title: "Total Amount", dataIndex: "totalSale" },
     { title: "Total Profit", dataIndex: "profit" },
     {
+      title: "Added On",
+      dataIndex: "createdAt",
+      render: (val) => {
+        if (!val) return "";
+        if (val.toDate) return new Date(val.toDate()).toLocaleString();
+        return new Date(val).toLocaleString();
+      }
+    },
+    {
       title: "Actions",
       render: (text, record) => (
         <Space>

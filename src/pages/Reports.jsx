@@ -76,11 +76,7 @@ export default function Reports() {
             <Statistic title="Total Sales" value={totals.totalSalesAmount.toFixed(2)} />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="Total Purchases" value={totals.totalPurchasesAmount.toFixed(2)} />
-          </Card>
-        </Col>
+        
         <Col span={6}>
           <Card>
             <Statistic title="Total Expenses" value={totals.totalExpensesAmount.toFixed(2)} />
@@ -99,9 +95,7 @@ export default function Reports() {
 
       <Card style={{ marginTop: 24 }} title="Export Collections">
         <Button onClick={() => downloadCSV('sales')}>Export Sales CSV</Button>
-        <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('purchases')}>
-          Export Purchases CSV
-        </Button>
+
         <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('expenses')}>
           Export Expense CSV
         </Button>

@@ -7,54 +7,65 @@ import dayjs from "dayjs";
 export default function Dashboard() {
   const { data: laptops = [] } = useCollectionRealtime("laptops");
   const { data: sales = [] } = useCollectionRealtime("sales");
-  const { data: purchases = [] } = useCollectionRealtime("purchases");
   const { data: expenses = [] } = useCollectionRealtime("expenses");
 
   const todayStart = dayjs().startOf("day");
   const weekStart = dayjs().startOf("week");
 
-  const totalStock = laptops.reduce(
-    (sum, laptop) => sum + (laptop.quantity || 0),
+  // 🔹 Calculate total sold per laptop ID (or name)
+  const soldCountByLaptop = sales.reduce((acc, sale) => {
+    const id = sale.laptopId || sale.laptopName; // adapt to your sales schema
+    const qty = Number(sale.quantity) || 0;
+    acc[id] = (acc[id] || 0) + qty;
+    return acc;
+  }, {});
+
+  // 🔹 Calculate available stock per laptop (can go negative)
+  const laptopsWithAvailableQty = laptops.map((laptop) => {
+    const soldQty = soldCountByLaptop[laptop.id || laptop.name] || 0;
+    const availableQty = (Number(laptop.quantity) || 0) - soldQty;
+    return { ...laptop, availableQty };
+  });
+
+  // 🔹 Total available laptops (sum of remaining quantities, including negatives)
+  const totalAvailableStock = laptopsWithAvailableQty.reduce(
+    (sum, l) => sum + (Number(l.availableQty) || 0),
     0
   );
 
-  const isToday = (date) =>
-    dayjs(date?.toDate?.() || date).isAfter(todayStart);
+  // 🔹 Date helpers
+  const isToday = (date) => dayjs(date?.toDate?.() || date).isAfter(todayStart);
   const isThisWeek = (date) =>
     dayjs(date?.toDate?.() || date).isAfter(weekStart);
 
+  // 🔹 Profit Today
   const todayProfit = sales
     .filter((sale) => isToday(sale.createdAt))
-    .reduce((sum, sale) => sum + (sale.profit || 0), 0);
+    .reduce((sum, sale) => sum + (Number(sale.profit) || 0), 0);
 
- 
+  // 🔹 Profit This Week
   const weekProfit = sales
-    .filter((sale) => {
-      const createdAt = sale.createdAt?.toDate?.() || sale.createdAt;
-      return dayjs(createdAt).isAfter(weekStart);
-    })
-    .reduce((sum, sale) => sum + (sale.profit || 0), 0);
+    .filter((sale) => isThisWeek(sale.createdAt))
+    .reduce((sum, sale) => sum + (Number(sale.profit) || 0), 0);
 
+  // 🔹 Expenses Today
   const expenseToday = expenses
     .filter((expense) => isToday(expense.createdAt))
-    .reduce((sum, e) => sum + (e.amount || 0), 0);
+    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
-  const totalPurchasesToday = purchases
-    .filter((purchase) =>
-      dayjs(purchase.createdAt?.toDate?.() || purchase.createdAt).isAfter(
-        todayStart
-      )
-    )
-    .reduce((s, it) => s + (it.purchasePrice * it.quantity || 0), 0);
-
+  // 🔹 Net Profit Today
   const netProfitToday = todayProfit - expenseToday;
 
+  // 🔹 Helper to format large numbers
   const formatValue = (num) =>
-    typeof num === "number" && !isNaN(num) ? num.toLocaleString() : "0";
+    typeof num === "number" && !isNaN(num)
+      ? num.toLocaleString("en-PK")
+      : "0";
 
   return (
     <DashboardLayout>
       <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
+        {/* 🧮 Available Stock */}
         <Col xs={24} sm={12} md={8} lg={8}>
           <Card
             style={{
@@ -65,13 +76,20 @@ export default function Dashboard() {
             }}
           >
             <Statistic
-              title={<span style={{ color: "white" }}>Total Stock</span>}
-              value={formatValue(totalStock)}
-              valueStyle={{ color: "white", fontWeight: "bold" }}
+              title={<span style={{ color: "white" }}>Available Laptops</span>}
+              value={formatValue(totalAvailableStock)}
+              valueStyle={{
+                color:
+                  totalAvailableStock < 0
+                    ? "#ffcccb"
+                    : "white",
+                fontWeight: "bold",
+              }}
             />
           </Card>
         </Col>
 
+        {/* 💰 Profit Today */}
         <Col xs={24} sm={12} md={8} lg={8}>
           <Card
             style={{
@@ -90,6 +108,7 @@ export default function Dashboard() {
           </Card>
         </Col>
 
+        {/* 📆 Profit This Week */}
         <Col xs={24} sm={12} md={8} lg={8}>
           <Card
             style={{
@@ -108,24 +127,7 @@ export default function Dashboard() {
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} md={8} lg={8}>
-          <Card
-            style={{
-              background: "linear-gradient(135deg, #ab47bc, #8e24aa)",
-              color: "white",
-              borderRadius: "16px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            }}
-          >
-            <Statistic
-              title={<span style={{ color: "white" }}>Purchases Today</span>}
-              prefix="Rs"
-              value={formatValue(totalPurchasesToday)}
-              valueStyle={{ color: "white", fontWeight: "bold" }}
-            />
-          </Card>
-        </Col>
-
+        {/* 💸 Expenses Today */}
         <Col xs={24} sm={12} md={8} lg={8}>
           <Card
             style={{
@@ -144,6 +146,7 @@ export default function Dashboard() {
           </Card>
         </Col>
 
+        {/* 📊 Net Profit Today */}
         <Col xs={24} sm={12} md={8} lg={8}>
           <Card
             style={{

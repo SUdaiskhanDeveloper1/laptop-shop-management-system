@@ -37,7 +37,6 @@ export default function Laptops() {
     setViewOpen(true);
   };
 
-  
   const columns = [
     {
       title: "#",
@@ -45,21 +44,26 @@ export default function Laptops() {
       render: (text, record, index) => index + 1,
       width: 60,
     },
-    { title: "Brand", dataIndex: "brand", key: "brand"  },
+    { title: "Brand", dataIndex: "brand", key: "brand" },
     { title: "Generation", dataIndex: "Generation", key: "Generation" },
     {
       title: "Accessories",
       dataIndex: "accessories",
       key: "accessories",
-      render: (val) => (val ? val : "—"), 
+      render: (val) => (val ? val : "—"),
     },
     { title: "Qty", dataIndex: "quantity", key: "quantity" },
     {
-      title: "T. Purchase Price",
+      title: "Purchase Price",
       dataIndex: "purchasePrice",
       key: "purchasePrice",
     },
-    
+    {
+      title: "Supplier",
+      dataIndex: "sellingPrice", 
+      key: "sellingPrice",
+    },
+
     {
       title: "Added On",
       dataIndex: "createdAt",
@@ -108,7 +112,7 @@ export default function Laptops() {
               <Descriptions.Item label="Brand">
                 {selected.brand}
               </Descriptions.Item>
-               <Descriptions.Item label="Accessories">
+              <Descriptions.Item label="Accessories">
                 {selected.accessories || "—"}
               </Descriptions.Item>
               <Descriptions.Item label="Generation">
@@ -123,7 +127,7 @@ export default function Laptops() {
               <Descriptions.Item label="Selling Price">
                 {selected.sellingPrice}
               </Descriptions.Item>
-             
+
               <Descriptions.Item label="Added On">
                 {selected.createdAt
                   ? selected.createdAt.toDate
