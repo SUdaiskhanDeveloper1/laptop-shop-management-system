@@ -20,80 +20,104 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 
-export default function Expenses() {
-  const { data: expenses } = useCollectionRealtime("expenses");
+export default function AdditionalSales() {
+  const { data: salesRaw } = useCollectionRealtime("additional_sales");
   const [openAdd, setOpenAdd] = useState(false);
   const [viewModal, setViewModal] = useState(false);
-  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [selectedSale, setSelectedSale] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  // ✅ Add new expense
+  const [currentPage, setCurrentPage] = useState(1); // ✅ Pagination state
+  const pageSize = 8; // ✅ Records per page
+
+  // ✅ Show newest first (latest added comes at the top)
+  const sales = [...(salesRaw || [])].sort((a, b) => {
+    const timeA = a.createdAt?.seconds || 0;
+    const timeB = b.createdAt?.seconds || 0;
+    return timeB - timeA;
+  });
+
+  // ✅ Add new sale (store with timestamp)
   async function onCreate(values) {
     try {
-      await addDoc(collection(db, "expenses"), values);
-      message.success("Expense added successfully");
+      await addDoc(collection(db, "additional_sales"), {
+        ...values,
+        createdAt: serverTimestamp(),
+      });
+      message.success("Sale added successfully");
       setOpenAdd(false);
       form.resetFields();
     } catch (e) {
       console.error(e);
-      message.error("Error adding expense");
+      message.error("Error adding sale");
     }
   }
 
-  // ✅ Update expense
+  // ✅ Update sale
   async function onUpdate(values) {
     try {
-      const expenseDoc = doc(db, "expenses", selectedExpense.id);
-      await updateDoc(expenseDoc, values);
-      message.success("Expense updated successfully");
+      const saleDoc = doc(db, "additional_sales", selectedSale.id);
+      await updateDoc(saleDoc, values);
+      message.success("Sale updated successfully");
       setIsEditing(false);
-      setSelectedExpense(null);
+      setSelectedSale(null);
       setViewModal(false);
       editForm.resetFields();
     } catch (e) {
       console.error(e);
-      message.error("Error updating expense");
+      message.error("Error updating sale");
     }
   }
 
-  // ✅ Delete expense
+  // ✅ Delete sale
   const handleDelete = async (id) => {
     try {
-      await deleteDoc(doc(db, "expenses", id));
-      message.success("Expense deleted successfully");
+      await deleteDoc(doc(db, "additional_sales", id));
+      message.success("Sale deleted successfully");
       setViewModal(false);
-      setSelectedExpense(null);
+      setSelectedSale(null);
     } catch (error) {
       console.error("Delete error:", error);
       message.error(`Delete failed: ${error.message}`);
     }
   };
 
-  // ✅ Sort by first-come (oldest first)
-  const sortedExpenses = expenses
-    ? [...expenses].sort((a, b) => new Date(a.date) - new Date(b.date))
-    : [];
-
   return (
     <DashboardLayout>
       <Card
-        title="Expenses"
+        title="Additional Sales"
         extra={
           <Button type="primary" onClick={() => setOpenAdd(true)}>
-            Add Expense
+            Add Sale
           </Button>
         }
       >
         <div style={{ overflowX: "auto" }}>
-          <Table dataSource={sortedExpenses} rowKey="id" scroll={{ x: 800 }}>
-            <Table.Column title="#" render={(text, record, index) => index + 1} />
+          <Table
+            dataSource={sales}
+            rowKey="id"
+            scroll={{ x: 800 }}
+            pagination={{
+              pageSize,
+              onChange: (page) => setCurrentPage(page), // ✅ track page change
+            }}
+          >
+            <Table.Column
+              title="#"
+              render={(text, record, index) =>
+                (currentPage - 1) * pageSize + index + 1
+              } // ✅ continuous numbering
+            />
             <Table.Column title="Description" dataIndex="description" />
-            <Table.Column title="Amount" dataIndex="amount" />
+            <Table.Column title="Quantity" dataIndex="qty" />
+            <Table.Column title="Purchase Price" dataIndex="purchasePrice" />
+            <Table.Column title="Sale Price" dataIndex="salePrice" />
             <Table.Column title="Date" dataIndex="date" />
             <Table.Column
               title="Action"
@@ -102,7 +126,7 @@ export default function Expenses() {
                   icon={<EyeOutlined />}
                   type="link"
                   onClick={() => {
-                    setSelectedExpense(record);
+                    setSelectedSale(record);
                     setViewModal(true);
                     setIsEditing(false);
                   }}
@@ -113,12 +137,12 @@ export default function Expenses() {
         </div>
       </Card>
 
-      {/* ➕ ADD EXPENSE MODAL */}
+      {/* ADD SALE MODAL */}
       <Modal
         open={openAdd}
         onCancel={() => setOpenAdd(false)}
         footer={null}
-        title="Add Expense"
+        title="Add New Sale"
       >
         <Form form={form} onFinish={onCreate} layout="vertical">
           <Form.Item
@@ -126,18 +150,28 @@ export default function Expenses() {
             label="Description"
             rules={[{ required: true }]}
           >
-            <Input placeholder="e.g. Electricity bill, Rent, Lunch Cost..." />
+            <Input placeholder="Enter sale description" />
           </Form.Item>
-          <Form.Item name="amount" label="Amount" rules={[{ required: true }]}>
-            <InputNumber
-              placeholder="Enter Total Amount"
-              style={{ width: "100%" }}
-            />
+          <Form.Item name="qty" label="Quantity" rules={[{ required: true }]}>
+            <InputNumber style={{ width: "100%" }} placeholder="Enter quantity" />
+          </Form.Item>
+          <Form.Item
+            name="purchasePrice"
+            label="Purchase Price"
+            rules={[{ required: true }]}
+          >
+            <InputNumber style={{ width: "100%" }} placeholder="Enter purchase price" />
+          </Form.Item>
+          <Form.Item
+            name="salePrice"
+            label="Sale Price"
+            rules={[{ required: true }]}
+          >
+            <InputNumber style={{ width: "100%" }} placeholder="Enter sale price" />
           </Form.Item>
           <Form.Item name="date" label="Date" rules={[{ required: true }]}>
             <Input placeholder="YYYY-MM-DD" />
           </Form.Item>
-
           <Form.Item>
             <Button htmlType="submit" type="primary" block>
               Save
@@ -146,39 +180,35 @@ export default function Expenses() {
         </Form>
       </Modal>
 
-      {/* 👁️ VIEW / EDIT MODAL */}
+      {/* VIEW / EDIT MODAL */}
       <Modal
         open={viewModal}
         onCancel={() => setViewModal(false)}
         footer={null}
         width={500}
-        title={isEditing ? "Edit Expense" : "Expense Details"}
+        title={isEditing ? "Edit Sale" : "Sale Details"}
       >
-        {selectedExpense && !isEditing && (
-          <Card bordered style={{ marginBottom: 10 }}>
-            <p>
-              <strong>Description:</strong> {selectedExpense.description}
-            </p>
-            <p>
-              <strong>Amount:</strong> {selectedExpense.amount}
-            </p>
-            <p>
-              <strong>Date:</strong> {selectedExpense.date}
-            </p>
+        {selectedSale && !isEditing && (
+          <Card style={{ marginBottom: 10 }}>
+            <p><strong>Description:</strong> {selectedSale.description}</p>
+            <p><strong>Quantity:</strong> {selectedSale.qty}</p>
+            <p><strong>Purchase Price:</strong> {selectedSale.purchasePrice}</p>
+            <p><strong>Sale Price:</strong> {selectedSale.salePrice}</p>
+            <p><strong>Date:</strong> {selectedSale.date}</p>
 
             <Space style={{ marginTop: 10 }}>
               <Button
                 type="primary"
                 onClick={() => {
                   setIsEditing(true);
-                  editForm.setFieldsValue(selectedExpense);
+                  editForm.setFieldsValue(selectedSale);
                 }}
               >
                 Edit
               </Button>
               <Popconfirm
-                title="Are you sure you want to delete this expense?"
-                onConfirm={() => handleDelete(selectedExpense.id)}
+                title="Are you sure you want to delete this sale?"
+                onConfirm={() => handleDelete(selectedSale.id)}
                 okText="Yes"
                 cancelText="No"
               >
@@ -199,7 +229,21 @@ export default function Expenses() {
             >
               <Input />
             </Form.Item>
-            <Form.Item name="amount" label="Amount" rules={[{ required: true }]}>
+            <Form.Item name="qty" label="Quantity" rules={[{ required: true }]}>
+              <InputNumber style={{ width: "100%" }} />
+            </Form.Item>
+            <Form.Item
+              name="purchasePrice"
+              label="Purchase Price"
+              rules={[{ required: true }]}
+            >
+              <InputNumber style={{ width: "100%" }} />
+            </Form.Item>
+            <Form.Item
+              name="salePrice"
+              label="Sale Price"
+              rules={[{ required: true }]}
+            >
               <InputNumber style={{ width: "100%" }} />
             </Form.Item>
             <Form.Item name="date" label="Date" rules={[{ required: true }]}>

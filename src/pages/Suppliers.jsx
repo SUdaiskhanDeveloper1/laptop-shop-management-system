@@ -19,11 +19,12 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 
 export default function Suppliers() {
-  const { data: suppliers } = useCollectionRealtime("suppliers");
+  const { data: suppliersRaw } = useCollectionRealtime("suppliers");
   const [openAdd, setOpenAdd] = useState(false);
   const [viewModal, setViewModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
@@ -31,10 +32,24 @@ export default function Suppliers() {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  // Add Supplier
+  // ✅ Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // ✅ Sort suppliers so newest comes first (latest added → top)
+  const suppliers = [...(suppliersRaw || [])].sort((a, b) => {
+    const timeA = a.createdAt?.seconds || 0;
+    const timeB = b.createdAt?.seconds || 0;
+    return timeB - timeA; // latest first
+  });
+
+  // ✅ Add Supplier (with createdAt timestamp)
   async function onCreate(values) {
     try {
-      await addDoc(collection(db, "suppliers"), values);
+      await addDoc(collection(db, "suppliers"), {
+        ...values,
+        createdAt: serverTimestamp(),
+      });
       message.success("Supplier added successfully");
       setOpenAdd(false);
       form.resetFields();
@@ -44,7 +59,7 @@ export default function Suppliers() {
     }
   }
 
-  // Update Supplier
+  // ✅ Update Supplier
   async function onUpdate(values) {
     try {
       const supplierDoc = doc(db, "suppliers", selectedSupplier.id);
@@ -60,7 +75,7 @@ export default function Suppliers() {
     }
   }
 
-  // Delete Supplier
+  // ✅ Delete Supplier
   const handleDelete = async (id) => {
     try {
       await deleteDoc(doc(db, "suppliers", id));
@@ -84,12 +99,25 @@ export default function Suppliers() {
           </Button>
         }
       >
-        <Table dataSource={suppliers} rowKey="id">
-          <Table.Column title="#" render={(text, record, index) => index + 1} />
+        <Table
+          dataSource={suppliers}
+          rowKey="id"
+          pagination={{
+            pageSize,
+            onChange: (page) => setCurrentPage(page),
+          }}
+        >
+          {/* ✅ Continuous numbering across pages */}
+          <Table.Column
+            title="#"
+            render={(text, record, index) =>
+              (currentPage - 1) * pageSize + index + 1
+            }
+          />
           <Table.Column title="Name" dataIndex="name" />
           <Table.Column title="Company" dataIndex="company" />
           <Table.Column title="Contact" dataIndex="contact" />
-          <Table.Column title="Date" dataIndex="date" />
+          <Table.Column title="Date of supply" dataIndex="date" />
           <Table.Column
             title="Action"
             render={(text, record) => (
@@ -115,16 +143,16 @@ export default function Suppliers() {
         title="Add Supplier"
       >
         <Form form={form} onFinish={onCreate} layout="vertical">
-          <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+          <Form.Item name="name" label="Name:" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="company" label="Company">
+          <Form.Item name="company" label="Company:">
             <Input />
           </Form.Item>
-          <Form.Item name="contact" label="Contact">
+          <Form.Item name="contact" label="Contact:">
             <Input />
           </Form.Item>
-          <Form.Item name="date" label="Date">
+          <Form.Item name="date" label="Date of Supply:">
             <Input placeholder="YYYY-MM-DD" />
           </Form.Item>
           <Form.Item>

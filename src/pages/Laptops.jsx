@@ -21,6 +21,10 @@ export default function Laptops() {
   const [selected, setSelected] = useState(null);
   const [viewOpen, setViewOpen] = useState(false);
 
+  // ✅ Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
   async function handleDelete(id) {
     try {
       await deleteDoc(doc(db, "laptops", id));
@@ -37,12 +41,24 @@ export default function Laptops() {
     setViewOpen(true);
   };
 
+  // ✅ Sort by latest first (descending order), then by brand ascending (A → Z)
+  const sortedLaptops =
+    laptops?.slice().sort((a, b) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+
+      if (dateA > dateB) return -1;
+      if (dateA < dateB) return 1;
+
+      return (a.brand || "").localeCompare(b.brand || "");
+    }) || [];
+
   const columns = [
     {
       title: "#",
       key: "index",
-      render: (text, record, index) => index + 1,
       width: 60,
+      render: (text, record, index) => (currentPage - 1) * pageSize + index + 1, // ✅ Continuous numbering
     },
     { title: "Brand", dataIndex: "brand", key: "brand" },
     { title: "Generation", dataIndex: "Generation", key: "Generation" },
@@ -60,10 +76,9 @@ export default function Laptops() {
     },
     {
       title: "Supplier Name",
-      dataIndex: "supplierName", 
+      dataIndex: "supplierName",
       key: "supplierName",
     },
-
     {
       title: "Added On",
       dataIndex: "createdAt",
@@ -95,7 +110,18 @@ export default function Laptops() {
           </Link>
         }
       >
-        <Table columns={columns} dataSource={laptops || []} rowKey="id" />
+        <div style={{ overflowX: "auto" }}>
+          <Table
+            columns={columns}
+            dataSource={sortedLaptops}
+            rowKey="id"
+            scroll={{ x: 800 }}
+            pagination={{
+              pageSize,
+              onChange: (page) => setCurrentPage(page), // ✅ Track current page
+            }}
+          />
+        </div>
       </Card>
 
       <Modal
@@ -127,7 +153,6 @@ export default function Laptops() {
               <Descriptions.Item label="Supplier Name">
                 {selected.supplierName || "—"}
               </Descriptions.Item>
-
               <Descriptions.Item label="Added On">
                 {selected.createdAt
                   ? selected.createdAt.toDate

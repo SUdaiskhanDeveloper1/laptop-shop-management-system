@@ -8,13 +8,15 @@ export default function Dashboard() {
   const { data: laptops = [] } = useCollectionRealtime("laptops");
   const { data: sales = [] } = useCollectionRealtime("sales");
   const { data: expenses = [] } = useCollectionRealtime("expenses");
+  const { data: additionalSales = [] } =
+    useCollectionRealtime("additional_sales"); // ✅ Added
 
   const todayStart = dayjs().startOf("day");
   const weekStart = dayjs().startOf("week");
 
   // 🔹 Calculate total sold per laptop ID (or name)
   const soldCountByLaptop = sales.reduce((acc, sale) => {
-    const id = sale.laptopId || sale.laptopName; // adapt to your sales schema
+    const id = sale.laptopId || sale.laptopName;
     const qty = Number(sale.quantity) || 0;
     acc[id] = (acc[id] || 0) + qty;
     return acc;
@@ -27,7 +29,6 @@ export default function Dashboard() {
     return { ...laptop, availableQty };
   });
 
-  // 🔹 Total available laptops (sum of remaining quantities, including negatives)
   const totalAvailableStock = laptopsWithAvailableQty.reduce(
     (sum, l) => sum + (Number(l.availableQty) || 0),
     0
@@ -38,133 +39,209 @@ export default function Dashboard() {
   const isThisWeek = (date) =>
     dayjs(date?.toDate?.() || date).isAfter(weekStart);
 
-  // 🔹 Profit Today
+  // 🔹 Profit from main sales
   const todayProfit = sales
     .filter((sale) => isToday(sale.createdAt))
     .reduce((sum, sale) => sum + (Number(sale.profit) || 0), 0);
 
-  // 🔹 Profit This Week
   const weekProfit = sales
     .filter((sale) => isThisWeek(sale.createdAt))
     .reduce((sum, sale) => sum + (Number(sale.profit) || 0), 0);
 
-  // 🔹 Expenses Today
+  // 🔹 Additional sales — total and profit
+  const totalAdditionalSales = additionalSales.length;
+  const additionalSalesAmount = additionalSales.reduce(
+    (sum, sale) =>
+      sum + (Number(sale.salePrice) || 0) * (Number(sale.qty) || 1),
+    0
+  );
+
+  const additionalProfit = additionalSales.reduce((sum, sale) => {
+    const purchase = Number(sale.purchasePrice) || 0;
+    const salePrice = Number(sale.salePrice) || 0;
+    const qty = Number(sale.qty) || 1;
+    return sum + (salePrice - purchase) * qty;
+  }, 0);
+
+  // 🔹 Additional weekly profit
+  const additionalWeeklyProfit = additionalSales
+    .filter((sale) => isThisWeek(sale.createdAt))
+    .reduce((sum, sale) => {
+      const purchase = Number(sale.purchasePrice) || 0;
+      const salePrice = Number(sale.salePrice) || 0;
+      const qty = Number(sale.qty) || 1;
+      return sum + (salePrice - purchase) * qty;
+    }, 0);
+
+  // 🔹 Expenses Today and This Week
   const expenseToday = expenses
     .filter((expense) => isToday(expense.createdAt))
     .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
-  // 🔹 Net Profit Today
-  const netProfitToday = todayProfit - expenseToday;
+  const expenseWeek = expenses
+    .filter((expense) => isThisWeek(expense.createdAt))
+    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+  // 🔹 Net Profit Today (including additional sales)
+  const netProfitToday = todayProfit + additionalProfit - expenseToday;
+  // 🔹 Net Profit This Week (including additional sales)
+  const netProfitWeek = weekProfit + additionalWeeklyProfit - expenseWeek;
 
   // 🔹 Helper to format large numbers
   const formatValue = (num) =>
-    typeof num === "number" && !isNaN(num)
-      ? num.toLocaleString("en-PK")
-      : "0";
+    typeof num === "number" && !isNaN(num) ? num.toLocaleString("en-PK") : "0";
 
-  return (
-    <DashboardLayout>
-      <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
-        {/* 🧮 Available Stock */}
-        <Col xs={24} sm={12} md={8} lg={8}>
-          <Card
+ return (
+  <DashboardLayout>
+    <div
+      style={{
+        margin: 0,
+        padding: 0,
+        background: "linear-gradient(135deg, #f5f7fa, #e3f2fd)",
+        minHeight: "70vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+      }}
+    >
+      <Row
+        gutter={[24, 24]}
+        justify="center"
+        style={{
+          width: "95%",
+          maxWidth: "1300px",
+        }}
+      >
+        {/* Function to reuse the same Card style */}
+        {[
+          {
+            title: "Available Laptops",
+            value: formatValue(totalAvailableStock),
+            gradient: "linear-gradient(145deg, #42a5f5, #1e88e5)",
+          },
+          {
+            title: "Profit Today",
+            value: `Rs ${formatValue(todayProfit)}`,
+            gradient: "linear-gradient(145deg, #66bb6a, #43a047)",
+          },
+          {
+            title: "Profit This Week",
+            value: `Rs ${formatValue(weekProfit)}`,
+            gradient: "linear-gradient(145deg, #388e3c, #81c784)",
+          },
+          {
+            title: "Additional Sales Today",
+            value: `Rs ${formatValue(additionalProfit)}`,
+            gradient: "linear-gradient(145deg, #ffa726, #fb8c00)",
+          },
+          {
+            title: "Additional Profit (Week)",
+            value: `Rs ${formatValue(additionalWeeklyProfit)}`,
+            gradient: "linear-gradient(145deg, #fbc02d, #ffeb3b)",
+          },
+          {
+            title: "Expenses Today",
+            value: `Rs ${formatValue(expenseToday)}`,
+            gradient: "linear-gradient(145deg, #ef5350, #e53935)",
+          },
+          {
+            title: "Net Profit (Today)",
+            value: `Rs ${formatValue(netProfitToday)}`,
+            gradient: "linear-gradient(145deg, #00acc1, #26c6da)",
+          },
+          {
+            title: "Net Profit (Week)",
+            value: `Rs ${formatValue(netProfitWeek)}`,
+            gradient: "linear-gradient(145deg, #00bcd4, #4dd0e1)",
+          },
+        ].map((card, index) => (
+          <Col
+            key={index}
+            xs={24}
+            sm={12}
+            md={8}
+            lg={6}
             style={{
-              background: "linear-gradient(135deg, #42a5f5, #478ed1)",
-              color: "white",
-              borderRadius: "16px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              display: "flex",
+              justifyContent: "center",
             }}
           >
-            <Statistic
-              title={<span style={{ color: "white" }}>Available Laptops</span>}
-              value={formatValue(totalAvailableStock)}
-              valueStyle={{
-                color:
-                  totalAvailableStock < 0
-                    ? "#ffcccb"
-                    : "white",
-                fontWeight: "bold",
+            <Card
+              variant={false}
+              hoverable
+              style={{
+                width: "100%",
+                height: "150px",
+                borderRadius: "20px",
+                background: card.gradient,
+                color: "white",
+                boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "column",
+                transition: "transform 0.3s ease, box-shadow 0.3s ease",
+                animation: `fadeInUp 0.6s ease ${index * 0.1}s forwards`,
+                opacity: 0,
               }}
-            />
-          </Card>
-        </Col>
-
-        {/* 💰 Profit Today */}
-        <Col xs={24} sm={12} md={8} lg={8}>
-          <Card
-            style={{
-              background: "linear-gradient(135deg, #66bb6a, #43a047)",
-              color: "white",
-              borderRadius: "16px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            }}
-          >
-            <Statistic
-              title={<span style={{ color: "white" }}>Profit Today</span>}
-              prefix="Rs"
-              value={formatValue(todayProfit)}
-              valueStyle={{ color: "white", fontWeight: "bold" }}
-            />
-          </Card>
-        </Col>
-
-        {/* 📆 Profit This Week */}
-        <Col xs={24} sm={12} md={8} lg={8}>
-          <Card
-            style={{
-              background: "linear-gradient(135deg, #ffca28, #fdd835)",
-              color: "white",
-              borderRadius: "16px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            }}
-          >
-            <Statistic
-              title={<span style={{ color: "white" }}>Profit This Week</span>}
-              prefix="Rs"
-              value={formatValue(weekProfit)}
-              valueStyle={{ color: "white", fontWeight: "bold" }}
-            />
-          </Card>
-        </Col>
-
-        {/* 💸 Expenses Today */}
-        <Col xs={24} sm={12} md={8} lg={8}>
-          <Card
-            style={{
-              background: "linear-gradient(135deg, #ef5350, #e53935)",
-              color: "white",
-              borderRadius: "16px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            }}
-          >
-            <Statistic
-              title={<span style={{ color: "white" }}>Expenses Today</span>}
-              prefix="Rs"
-              value={formatValue(expenseToday)}
-              valueStyle={{ color: "white", fontWeight: "bold" }}
-            />
-          </Card>
-        </Col>
-
-        {/* 📊 Net Profit Today */}
-        <Col xs={24} sm={12} md={8} lg={8}>
-          <Card
-            style={{
-              background: "linear-gradient(135deg, #26c6da, #00acc1)",
-              color: "white",
-              borderRadius: "16px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            }}
-          >
-            <Statistic
-              title={<span style={{ color: "white" }}>Net Profit Today</span>}
-              prefix="Rs"
-              value={formatValue(netProfitToday)}
-              valueStyle={{ color: "white", fontWeight: "bold" }}
-            />
-          </Card>
-        </Col>
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.05)";
+                e.currentTarget.style.boxShadow =
+                  "0 10px 25px rgba(0,0,0,0.25)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.boxShadow =
+                  "0 8px 20px rgba(0,0,0,0.2)";
+              }}
+            >
+              <Statistic
+                title={
+                  <span style={{ color: "white", fontWeight: 500 }}>
+                    {card.title}
+                  </span>
+                }
+                value={card.value}
+                valueStyle={{
+                  color: "white",
+                  fontWeight: "bold",
+                  fontSize: "26px",
+                  textAlign:"center"
+                }}
+              />
+            </Card>
+          </Col>
+        ))}
       </Row>
-    </DashboardLayout>
-  );
+
+      {/* Inline animation keyframes */}
+      <style>
+        {`
+          @keyframes fadeInUp {
+            from {
+              transform: translateY(20px);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+
+          /* Ensure no scrollbars anywhere */
+          ::-webkit-scrollbar {
+            display: none;
+          }
+          html, body {
+           
+          }
+        `}
+      </style>
+    </div>
+  </DashboardLayout>
+);
+
+
+
 }

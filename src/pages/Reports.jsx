@@ -19,10 +19,18 @@ export default function Reports() {
         const salesSnap = await getDocs(collection(db, 'sales'))
         const purchasesSnap = await getDocs(collection(db, 'purchases'))
         const expensesSnap = await getDocs(collection(db, 'expenses'))
+        const additionalSalesSnap = await getDocs(collection(db, 'additional_sales'))
 
         const totalSalesAmount = salesSnap.docs.reduce((sum, doc) => {
           const data = doc.data()
           return sum + (data.totalSale || 0)
+        }, 0)
+
+        const totalAdditionalSales = additionalSalesSnap.docs.reduce((sum, doc) => {
+          const data = doc.data()
+          const salePrice = Number(data.salePrice || 0)
+          const qty = Number(data.qty || 1)
+          return sum + salePrice * qty
         }, 0)
 
         const totalPurchasesAmount = purchasesSnap.docs.reduce((sum, doc) => {
@@ -37,11 +45,11 @@ export default function Reports() {
           return sum + (data.amount || 0)
         }, 0)
 
-       
         const profit = totalSalesAmount - (totalPurchasesAmount + totalExpensesAmount)
 
         setTotals({
           totalSalesAmount,
+          totalAdditionalSales,
           totalPurchasesAmount,
           totalExpensesAmount,
           profit
@@ -70,34 +78,32 @@ export default function Reports() {
 
   return (
     <DashboardLayout>
-      <Row gutter={16}>
-        <Col span={6}>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} md={8} lg={6}>
           <Card>
             <Statistic title="Total Sales" value={totals.totalSalesAmount.toFixed(2)} />
           </Card>
         </Col>
-        
-        <Col span={6}>
+        <Col xs={24} sm={12} md={8} lg={6}>
+          <Card>
+            <Statistic title="Total Additional Sales" value={totals.totalAdditionalSales ? totals.totalAdditionalSales.toFixed(2) : '0.00'} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={8} lg={6}>
           <Card>
             <Statistic title="Total Expenses" value={totals.totalExpensesAmount.toFixed(2)} />
           </Card>
         </Col>
-        {/* <Col span={6}>
-          <Card>
-            <Statistic
-              title="Profit"
-              value={totals.profit.toFixed(2)}
-              valueStyle={{ color: totals.profit >= 0 ? 'green' : 'red' }}
-            />
-          </Card>
-        </Col> */}
       </Row>
 
       <Card style={{ marginTop: 24 }} title="Export Collections">
         <Button onClick={() => downloadCSV('sales')}>Export Sales CSV</Button>
-
         <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('expenses')}>
           Export Expense CSV
+        </Button>
+        <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('additional_sales')}>
+          Export Additional Sales CSV
         </Button>
       </Card>
     </DashboardLayout>

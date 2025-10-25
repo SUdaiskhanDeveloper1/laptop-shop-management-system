@@ -12,6 +12,7 @@ export default function Sidebar(){
     { key: '/laptops', icon: <LaptopOutlined />, label: <Link to="/laptops">Laptops</Link> },
     { key: '/sales', icon: <ShoppingOutlined />, label: <Link to="/sales">Sales</Link> },
     { key: '/suppliers', icon: <FileTextOutlined />, label: <Link to="/suppliers">Suppliers</Link> },
+  { key: '/additionalSales', icon: <FileTextOutlined />, label: <Link to="/additionalSales">AdditionalSales</Link> },
     { key: '/reports', icon: <FileTextOutlined />, label: <Link to="/reports">Reports</Link> },
     {key: '/expenses', icon: <FileTextOutlined />, label: <Link to="/expenses">Expenses</Link> },
     { key: '/settings', icon: <SettingOutlined />, label: <Link to="/settings">Settings</Link> }

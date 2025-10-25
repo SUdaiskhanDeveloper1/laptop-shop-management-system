@@ -1,15 +1,17 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import DashboardLayout from "../components/Layout/DashboardLayout";
 import { Table, Card } from "antd";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/config";
-import { useEffect, useState } from "react";
 
 export default function SalesHistory() {
   const [sales, setSales] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1); // ✅ pagination state
+  const pageSize = 8; // ✅ number of records per page
 
   useEffect(() => {
-    const q = query(collection(db, "sales"), orderBy("createdAt", "desc")); // 👈 sort by newest first
+    // ✅ Fetch data sorted by latest first (newest sales appear first)
+    const q = query(collection(db, "sales"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -21,7 +23,11 @@ export default function SalesHistory() {
   }, []);
 
   const columns = [
-    { title: "#", render: (t, r, i) => i + 1, width: 60 },
+    {
+      title: "#",
+      width: 60,
+      render: (text, record, index) => (currentPage - 1) * pageSize + index + 1, // ✅ continuous numbering
+    },
     { title: "Generation", dataIndex: "laptopGeneration" },
     { title: "Qty", dataIndex: "quantity" },
     { title: "Unit Price", dataIndex: "sellingPrice" },
@@ -46,7 +52,10 @@ export default function SalesHistory() {
           dataSource={sales || []}
           columns={columns}
           rowKey="id"
-          pagination={{ pageSize: 8 }}
+          pagination={{
+            pageSize,
+            onChange: (page) => setCurrentPage(page), // ✅ track page change
+          }}
         />
       </Card>
     </DashboardLayout>

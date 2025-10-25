@@ -10,7 +10,8 @@ import Suppliers from './pages/Suppliers'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import ProtectedRoute from './components/ProtectedRoute'
-import Expenses from './pages/Expenses' 
+import Expenses from './pages/Expenses'
+import AdditionalSales from './pages/AdditionalSales' 
 
 export default function App(){
   return (
@@ -23,6 +24,7 @@ export default function App(){
       <Route path="/laptops/edit/:id" element={<ProtectedRoute><LaptopForm/></ProtectedRoute>} />
       <Route path="/sales" element={<ProtectedRoute><Sales/></ProtectedRoute>} />
       <Route path="/suppliers" element={<ProtectedRoute><Suppliers/></ProtectedRoute>} />
+      <Route path="/AdditionalSales"element={<ProtectedRoute><AdditionalSales/></ProtectedRoute>}/>
       <Route path="/reports" element={<ProtectedRoute><Reports/></ProtectedRoute>} />
       <Route path="/expenses" element={<ProtectedRoute><Expenses/></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
