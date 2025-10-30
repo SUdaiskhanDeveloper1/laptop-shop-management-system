@@ -3,6 +3,7 @@ import { Card, Form, Input, Button, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../firebase/config'
+import { MailOutlined, LockOutlined, LoginOutlined } from '@ant-design/icons'
 
 export default function Login() {
   const [loading, setLoading] = useState(false)
@@ -45,50 +46,88 @@ export default function Login() {
         height: '100vh',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f5f6fa',
+       background: '#f5f6fa',
+        fontFamily: 'Poppins, sans-serif',
       }}
     >
-     
       {contextHolder}
 
       <Card
-        title="Admin Login"
+        title={
+          <div style={{ fontSize: 22, fontWeight: 600, color: '#5563DE' }}>
+            <LoginOutlined style={{ marginRight: 8, color: '#5563DE' }} />
+            Admin Login
+          </div>
+        }
         style={{
-          width: 360,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          borderRadius: 12,
-          
+          width: 380,
+          borderRadius: 16,
+          boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+          overflow: 'hidden',
+          textAlign: 'center',
+          background: '#fff',
+          transition: 'transform 0.3s ease',
         }}
+        bodyStyle={{ padding: '28px 32px' }}
+        hoverable
       >
+        <p style={{ color: '#888', marginBottom: 24 }}>
+          Welcome back! Please login to your dashboard.
+        </p>
+
         <Form layout="vertical" onFinish={onFinish}>
           <Form.Item
             name="email"
-            label="Email"
+            label={<span style={{ fontWeight: 500 }}>Email</span>}
             rules={[{ required: true, message: 'Please enter your email' }]}
           >
-            <Input placeholder="Enter your email" />
+            <Input
+              prefix={<MailOutlined style={{ color: '#5563DE' }} />}
+              placeholder="Enter your email"
+              size="large"
+              style={{
+                borderRadius: 8,
+              }}
+            />
           </Form.Item>
 
           <Form.Item
             name="password"
-            label="Password"
+            label={<span style={{ fontWeight: 500 }}>Password</span>}
             rules={[{ required: true, message: 'Please enter your password' }]}
           >
-            <Input.Password placeholder="Enter your password" />
+            <Input.Password
+              prefix={<LockOutlined style={{ color: '#5563DE' }} />}
+              placeholder="Enter your password"
+              size="large"
+              style={{
+                borderRadius: 8,
+              }}
+            />
           </Form.Item>
 
           <Form.Item>
             <Button
               type="primary"
               htmlType="submit"
-              block
+              size="large"
               loading={loading}
-              style={{ borderRadius: 8 }}
+              block
+              style={{
+                borderRadius: 10,
+                background: 'linear-gradient(90deg, #5563DE, #74ABE2)',
+                fontWeight: 600,
+                letterSpacing: 0.5,
+              }}
             >
               Login
             </Button>
           </Form.Item>
         </Form>
+
+        <p style={{ marginTop: 16, color: '#888', fontSize: 13 }}>
+          © 2025 Laptop Shop Management System
+        </p>
       </Card>
     </div>
   )
