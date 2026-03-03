@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import DashboardLayout from '../components/Layout/DashboardLayout'
-import { Card, Button, Row, Col, Statistic, message } from 'antd'
+import { Card, Button, Row, Col, Statistic, message, Spin } from 'antd'
 import { getFirestore, collection, getDocs } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { exportCollectionCSV } from '../firebase/services'
@@ -8,13 +8,16 @@ import { exportCollectionCSV } from '../firebase/services'
 export default function Reports() {
   const [totals, setTotals] = useState({
     totalSalesAmount: 0,
+    totalAdditionalSales: 0,
     totalPurchasesAmount: 0,
     totalExpensesAmount: 0,
     profit: 0
   })
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadTotals() {
+      setLoading(true)
       try {
         const salesSnap = await getDocs(collection(db, 'sales'))
         const purchasesSnap = await getDocs(collection(db, 'purchases'))
@@ -57,13 +60,14 @@ export default function Reports() {
       } catch (error) {
         console.error('Error fetching totals:', error)
         message.error('Error loading report data')
+      } finally {
+        setLoading(false) 
       }
     }
 
     loadTotals()
   }, [])
 
- 
   const downloadCSV = async (collectionName) => {
     const csv = await exportCollectionCSV(collectionName)
     if (!csv) return message.info('No data found')
@@ -78,34 +82,44 @@ export default function Reports() {
 
   return (
     <DashboardLayout>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 80 }}>
+          <Spin size="large" tip="Loading report data..." />
+        </div>
+      ) : (
+        <>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Card>
+                <Statistic title="Total Sales" value={totals.totalSalesAmount.toFixed(2)} />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Card>
+                <Statistic
+                  title="Total Additional Sales"
+                  value={totals.totalAdditionalSales ? totals.totalAdditionalSales.toFixed(2) : '0.00'}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Card>
+                <Statistic title="Total Expenses" value={totals.totalExpensesAmount.toFixed(2)} />
+              </Card>
+            </Col>
+          </Row>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Card>
-            <Statistic title="Total Sales" value={totals.totalSalesAmount.toFixed(2)} />
+          <Card style={{ marginTop: 24 }} title="Export Collections">
+            <Button onClick={() => downloadCSV('sales')}>Export Sales CSV</Button>
+            <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('expenses')}>
+              Export Expense CSV
+            </Button>
+            <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('additional_sales')}>
+              Export Additional Sales CSV
+            </Button>
           </Card>
-        </Col>
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Card>
-            <Statistic title="Total Additional Sales" value={totals.totalAdditionalSales ? totals.totalAdditionalSales.toFixed(2) : '0.00'} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Card>
-            <Statistic title="Total Expenses" value={totals.totalExpensesAmount.toFixed(2)} />
-          </Card>
-        </Col>
-      </Row>
-
-      <Card style={{ marginTop: 24 }} title="Export Collections">
-        <Button onClick={() => downloadCSV('sales')}>Export Sales CSV</Button>
-        <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('expenses')}>
-          Export Expense CSV
-        </Button>
-        <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('additional_sales')}>
-          Export Additional Sales CSV
-        </Button>
-      </Card>
+        </>
+      )}
     </DashboardLayout>
   )
 }

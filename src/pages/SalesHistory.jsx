@@ -6,11 +6,11 @@ import { db } from "../firebase/config";
 
 export default function SalesHistory() {
   const [sales, setSales] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1); // ✅ pagination state
-  const pageSize = 8; // ✅ number of records per page
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1); 
+  const pageSize = 8; 
 
   useEffect(() => {
-    // ✅ Fetch data sorted by latest first (newest sales appear first)
     const q = query(collection(db, "sales"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
@@ -18,6 +18,7 @@ export default function SalesHistory() {
         ...doc.data(),
       }));
       setSales(data);
+      setLoading(false);
     });
     return () => unsub();
   }, []);
@@ -26,7 +27,7 @@ export default function SalesHistory() {
     {
       title: "#",
       width: 60,
-      render: (text, record, index) => (currentPage - 1) * pageSize + index + 1, // ✅ continuous numbering
+      render: (text, record, index) => (currentPage - 1) * pageSize + index + 1, 
     },
     { title: "Generation", dataIndex: "laptopGeneration" },
     { title: "Qty", dataIndex: "quantity" },
@@ -49,12 +50,13 @@ export default function SalesHistory() {
     <DashboardLayout>
       <Card title="Sales History">
         <Table
+          loading={loading}
           dataSource={sales || []}
           columns={columns}
           rowKey="id"
           pagination={{
             pageSize,
-            onChange: (page) => setCurrentPage(page), // ✅ track page change
+            onChange: (page) => setCurrentPage(page),
           }}
         />
       </Card>

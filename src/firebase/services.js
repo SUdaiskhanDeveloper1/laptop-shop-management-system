@@ -162,7 +162,7 @@ export const getProfitSummary = async () => {
   }
 };
 
-import { Timestamp } from "firebase/firestore";
+// import { Timestamp } from "firebase/firestore";
 
 export const getSales = async () => {
   const q = query(collection(db, "sales"), orderBy("createdAt", "desc"));

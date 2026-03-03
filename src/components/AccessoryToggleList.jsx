@@ -1,5 +1,4 @@
 
-import React from 'react'
 import { Checkbox } from 'antd'
 
 export default function AccessoryToggleList({ value = [], onChange }) {

@@ -9,6 +9,7 @@ import {
   Input,
   message,
   Space,
+    DatePicker, 
   Popconfirm,
 } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
@@ -19,12 +20,11 @@ import {
   doc,
   updateDoc,
   deleteDoc,
-  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 
 export default function Suppliers() {
-  const { data: suppliersRaw } = useCollectionRealtime("suppliers");
+  const { data: suppliersRaw, loading: suppliersLoading } = useCollectionRealtime("suppliers");
   const [openAdd, setOpenAdd] = useState(false);
   const [viewModal, setViewModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
@@ -32,23 +32,20 @@ export default function Suppliers() {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  // ✅ Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  // ✅ Sort suppliers so newest comes first (latest added → top)
   const suppliers = [...(suppliersRaw || [])].sort((a, b) => {
     const timeA = a.createdAt?.seconds || 0;
     const timeB = b.createdAt?.seconds || 0;
-    return timeB - timeA; // latest first
+    return timeB - timeA; 
   });
 
-  // ✅ Add Supplier (with createdAt timestamp)
   async function onCreate(values) {
     try {
       await addDoc(collection(db, "suppliers"), {
         ...values,
-        createdAt: serverTimestamp(),
+      date: values.date.format("YYYY-MM-DD"),
       });
       message.success("Supplier added successfully");
       setOpenAdd(false);
@@ -59,7 +56,6 @@ export default function Suppliers() {
     }
   }
 
-  // ✅ Update Supplier
   async function onUpdate(values) {
     try {
       const supplierDoc = doc(db, "suppliers", selectedSupplier.id);
@@ -75,7 +71,6 @@ export default function Suppliers() {
     }
   }
 
-  // ✅ Delete Supplier
   const handleDelete = async (id) => {
     try {
       await deleteDoc(doc(db, "suppliers", id));
@@ -90,7 +85,6 @@ export default function Suppliers() {
 
   return (
     <DashboardLayout>
-      {/* Supplier Table */}
       <Card
         title="Suppliers"
         extra={
@@ -100,6 +94,7 @@ export default function Suppliers() {
         }
       >
         <Table
+          loading={suppliersLoading}
           dataSource={suppliers}
           rowKey="id"
           pagination={{
@@ -107,7 +102,6 @@ export default function Suppliers() {
             onChange: (page) => setCurrentPage(page),
           }}
         >
-          {/* ✅ Continuous numbering across pages */}
           <Table.Column
             title="#"
             render={(text, record, index) =>
@@ -135,7 +129,6 @@ export default function Suppliers() {
         </Table>
       </Card>
 
-      {/* Add Supplier Modal */}
       <Modal
         open={openAdd}
         onCancel={() => setOpenAdd(false)}
@@ -152,8 +145,12 @@ export default function Suppliers() {
           <Form.Item name="contact" label="Contact:">
             <Input />
           </Form.Item>
-          <Form.Item name="date" label="Date of Supply:">
-            <Input placeholder="YYYY-MM-DD" />
+          <Form.Item
+            name="date"
+            label="Date of Supply:"
+            rules={[{ required: true, message: "Please select date" }]}
+          >
+            <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
           </Form.Item>
           <Form.Item>
             <Button htmlType="submit" type="primary" block>
@@ -163,7 +160,6 @@ export default function Suppliers() {
         </Form>
       </Modal>
 
-      {/* View/Edit Supplier Modal */}
       <Modal
         open={viewModal}
         onCancel={() => setViewModal(false)}
@@ -209,7 +205,6 @@ export default function Suppliers() {
           </Card>
         )}
 
-        {/* Edit Form */}
         {isEditing && (
           <Form form={editForm} onFinish={onUpdate} layout="vertical">
             <Form.Item name="name" label="Name" rules={[{ required: true }]}>

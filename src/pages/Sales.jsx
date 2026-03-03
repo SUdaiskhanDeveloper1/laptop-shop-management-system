@@ -19,8 +19,8 @@ import { doc, updateDoc } from "firebase/firestore";
 import { addSale, deleteSale } from "../firebase/services";
 
 export default function Sales() {
-  const { data: sales } = useCollectionRealtime("sales");
-  const { data: laptops } = useCollectionRealtime("laptops");
+  const { data: sales, loading: salesLoading } = useCollectionRealtime("sales");
+  const { data: laptops, loading: laptopsLoading } = useCollectionRealtime("laptops");
   const [selected, setSelected] = useState(null);
   const [viewOpen, setViewOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -143,12 +143,12 @@ export default function Sales() {
       <Card
         title="Sales"
         extra={
-          <Button type="primary" onClick={() => setAddOpen(true)}>
+          <Button type="primary" disabled={salesLoading || laptopsLoading} onClick={() => setAddOpen(true)}>
             Add Sale
           </Button>
         }
       >
-        <Table dataSource={sales || []} columns={columns} rowKey="id" />
+        <Table  loading={salesLoading || laptopsLoading} dataSource={sales || []} columns={columns} rowKey="id" />
       </Card>
 
       <Modal
@@ -165,6 +165,8 @@ export default function Sales() {
             rules={[{ required: true }]}
           >
             <Select
+              loading={laptopsLoading}
+              disabled={laptopsLoading}
               options={laptops.map((l) => ({
                 label: `${l.brand} ${l.Generation} (qty:${l.quantity})`,
                 value: l.id,
@@ -213,6 +215,8 @@ export default function Sales() {
                 rules={[{ required: true }]}
               >
                 <Select
+                  loading={laptopsLoading}
+                  disabled={laptopsLoading}
                   options={laptops.map((l) => ({
                     label: `${l.brand} ${l.Generation}`,
                     value: l.id,

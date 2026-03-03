@@ -21,8 +21,8 @@ import { db } from "../firebase/config";
 import useCollectionRealtime from "../utils/useCollectionRealtime";
 
 export default function Purchases() {
-  const { data: purchases } = useCollectionRealtime("purchases");
-  const { data: laptops } = useCollectionRealtime("laptops");
+  const { data: purchases, loading: purchasesLoading } = useCollectionRealtime("purchases");
+  const { data: laptops, loading: laptopsLoading } = useCollectionRealtime("laptops");
 
   const [selected, setSelected] = useState(null);
   const [viewOpen, setViewOpen] = useState(false);
@@ -112,6 +112,7 @@ export default function Purchases() {
         extra={
           <Button
             type="primary"
+            disabled={purchasesLoading || laptopsLoading}
             onClick={() => {
               setSelected(null);
               setEditOpen(true);
@@ -123,6 +124,7 @@ export default function Purchases() {
         }
       >
         <Table
+          loading={purchasesLoading || laptopsLoading}
           columns={columns}
           dataSource={
             purchases

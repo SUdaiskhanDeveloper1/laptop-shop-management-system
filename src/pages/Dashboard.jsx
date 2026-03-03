@@ -1,20 +1,18 @@
-import React from "react";
 import DashboardLayout from "../components/Layout/DashboardLayout";
-import { Row, Col, Card, Statistic } from "antd";
+import { Row, Col, Card, Statistic, Spin } from "antd";
 import useCollectionRealtime from "../utils/useCollectionRealtime";
 import dayjs from "dayjs";
 
 export default function Dashboard() {
-  const { data: laptops = [] } = useCollectionRealtime("laptops");
-  const { data: sales = [] } = useCollectionRealtime("sales");
-  const { data: expenses = [] } = useCollectionRealtime("expenses");
-  const { data: additionalSales = [] } =
-    useCollectionRealtime("additional_sales"); // ✅ Added
+  const { data: laptops = [], loading: laptopsLoading } = useCollectionRealtime("laptops");
+  const { data: sales = [], loading: salesLoading } = useCollectionRealtime("sales");
+  const { data: expenses = [], loading: expensesLoading } = useCollectionRealtime("expenses");
+  const { data: additionalSales = [], loading: additionalLoading } =
+    useCollectionRealtime("additional_sales");
 
   const todayStart = dayjs().startOf("day");
   const weekStart = dayjs().startOf("week");
 
-  // 🔹 Calculate total sold per laptop ID (or name)
   const soldCountByLaptop = sales.reduce((acc, sale) => {
     const id = sale.laptopId || sale.laptopName;
     const qty = Number(sale.quantity) || 0;
@@ -22,7 +20,6 @@ export default function Dashboard() {
     return acc;
   }, {});
 
-  // 🔹 Calculate available stock per laptop (can go negative)
   const laptopsWithAvailableQty = laptops.map((laptop) => {
     const soldQty = soldCountByLaptop[laptop.id || laptop.name] || 0;
     const availableQty = (Number(laptop.quantity) || 0) - soldQty;
@@ -31,15 +28,13 @@ export default function Dashboard() {
 
   const totalAvailableStock = laptopsWithAvailableQty.reduce(
     (sum, l) => sum + (Number(l.availableQty) || 0),
-    0
+    0,
   );
 
-  // 🔹 Date helpers
   const isToday = (date) => dayjs(date?.toDate?.() || date).isAfter(todayStart);
   const isThisWeek = (date) =>
     dayjs(date?.toDate?.() || date).isAfter(weekStart);
 
-  // 🔹 Profit from main sales
   const todayProfit = sales
     .filter((sale) => isToday(sale.createdAt))
     .reduce((sum, sale) => sum + (Number(sale.profit) || 0), 0);
@@ -48,12 +43,11 @@ export default function Dashboard() {
     .filter((sale) => isThisWeek(sale.createdAt))
     .reduce((sum, sale) => sum + (Number(sale.profit) || 0), 0);
 
-  // 🔹 Additional sales — total and profit
   const totalAdditionalSales = additionalSales.length;
   const additionalSalesAmount = additionalSales.reduce(
     (sum, sale) =>
       sum + (Number(sale.salePrice) || 0) * (Number(sale.qty) || 1),
-    0
+    0,
   );
 
   const additionalProfit = additionalSales.reduce((sum, sale) => {
@@ -63,7 +57,6 @@ export default function Dashboard() {
     return sum + (salePrice - purchase) * qty;
   }, 0);
 
-  // 🔹 Additional weekly profit
   const additionalWeeklyProfit = additionalSales
     .filter((sale) => isThisWeek(sale.createdAt))
     .reduce((sum, sale) => {
@@ -73,7 +66,6 @@ export default function Dashboard() {
       return sum + (salePrice - purchase) * qty;
     }, 0);
 
-  // 🔹 Expenses Today and This Week
   const expenseToday = expenses
     .filter((expense) => isToday(expense.createdAt))
     .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
@@ -82,142 +74,142 @@ export default function Dashboard() {
     .filter((expense) => isThisWeek(expense.createdAt))
     .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
-  // 🔹 Net Profit Today (including additional sales)
   const netProfitToday = todayProfit + additionalProfit - expenseToday;
-  // 🔹 Net Profit This Week (including additional sales)
   const netProfitWeek = weekProfit + additionalWeeklyProfit - expenseWeek;
 
-  // 🔹 Helper to format large numbers
   const formatValue = (num) =>
     typeof num === "number" && !isNaN(num) ? num.toLocaleString("en-PK") : "0";
 
- return (
-  <DashboardLayout>
-    <div
-      style={{
-        margin: 0,
-        padding: 0,
-        background: "linear-gradient(135deg, #f5f7fa, #e3f2fd)",
-        minHeight: "70vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexDirection: "column",
-      }}
-    >
-      <Row
-        gutter={[24, 24]}
-        justify="center"
+  const loadingAny = laptopsLoading || salesLoading || expensesLoading || additionalLoading;
+
+  return (
+    <DashboardLayout>
+      {/* <Spin  tip="Loading summary..."> */}
+      <Spin  spinning={loadingAny} size="large"  >
+        
+      <div
         style={{
-          width: "95%",
-          maxWidth: "1300px",
+          margin: 0,
+          padding: 0,
+          background: "linear-gradient(135deg, #f5f7fa, #e3f2fd)",
+          minHeight: "70vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
         }}
       >
-        {/* Function to reuse the same Card style */}
-        {[
-          {
-            title: "Available Laptops",
-            value: formatValue(totalAvailableStock),
-            gradient: "linear-gradient(145deg, #42a5f5, #1e88e5)",
-          },
-          {
-            title: "Profit Today",
-            value: `Rs ${formatValue(todayProfit)}`,
-            gradient: "linear-gradient(145deg, #66bb6a, #43a047)",
-          },
-          {
-            title: "Profit This Week",
-            value: `Rs ${formatValue(weekProfit)}`,
-            gradient: "linear-gradient(145deg, #388e3c, #81c784)",
-          },
-          {
-            title: "Additional Sales Today",
-            value: `Rs ${formatValue(additionalProfit)}`,
-            gradient: "linear-gradient(145deg, #ffa726, #fb8c00)",
-          },
-          {
-            title: "Additional Profit (Week)",
-            value: `Rs ${formatValue(additionalWeeklyProfit)}`,
-            gradient: "linear-gradient(145deg, #fbc02d, #ffeb3b)",
-          },
-          {
-            title: "Expenses Today",
-            value: `Rs ${formatValue(expenseToday)}`,
-            gradient: "linear-gradient(145deg, #ef5350, #e53935)",
-          },
-          {
-            title: "Net Profit (Today)",
-            value: `Rs ${formatValue(netProfitToday)}`,
-            gradient: "linear-gradient(145deg, #00acc1, #26c6da)",
-          },
-          {
-            title: "Net Profit (Week)",
-            value: `Rs ${formatValue(netProfitWeek)}`,
-            gradient: "linear-gradient(145deg, #00bcd4, #4dd0e1)",
-          },
-        ].map((card, index) => (
-          <Col
-            key={index}
-            xs={24}
-            sm={12}
-            md={8}
-            lg={6}
-            style={{
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            <Card
-              variant={false}
-              hoverable
+        <Row
+          gutter={[24, 24]}
+          justify="center"
+          style={{
+            width: "95%",
+            maxWidth: "1300px",
+          }}
+        >
+          {[
+            {
+              title: "Available Laptops",
+              value: formatValue(totalAvailableStock),
+              gradient: "linear-gradient(145deg, #42a5f5, #1e88e5)",
+            },
+            {
+              title: "Profit Today",
+              value: `Rs ${formatValue(todayProfit)}`,
+              gradient: "linear-gradient(145deg, #66bb6a, #43a047)",
+            },
+            {
+              title: "Profit This Week",
+              value: `Rs ${formatValue(weekProfit)}`,
+              gradient: "linear-gradient(145deg, #388e3c, #81c784)",
+            },
+            {
+              title: "Additional Sales Today",
+              value: `Rs ${formatValue(additionalProfit)}`,
+              gradient: "linear-gradient(145deg, #ffa726, #fb8c00)",
+            },
+            {
+              title: "Additional Profit (Week)",
+              value: `Rs ${formatValue(additionalWeeklyProfit)}`,
+              gradient: "linear-gradient(145deg, #fbc02d, #ffeb3b)",
+            },
+            {
+              title: "Expenses Today",
+              value: `Rs ${formatValue(expenseToday)}`,
+              gradient: "linear-gradient(145deg, #ef5350, #e53935)",
+            },
+            {
+              title: "Net Profit (Today)",
+              value: `Rs ${formatValue(netProfitToday)}`,
+              gradient: "linear-gradient(145deg, #00acc1, #26c6da)",
+            },
+            {
+              title: "Net Profit (Week)",
+              value: `Rs ${formatValue(netProfitWeek)}`,
+              gradient: "linear-gradient(145deg, #00bcd4, #4dd0e1)",
+            },
+          ].map((card, index) => (
+            <Col
+              key={index}
+              xs={24}
+              sm={12}
+              md={8}
+              lg={6}
               style={{
-                width: "100%",
-                height: "150px",
-                borderRadius: "20px",
-                background: card.gradient,
-                color: "white",
-                boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
                 display: "flex",
-                alignItems: "center",
                 justifyContent: "center",
-                flexDirection: "column",
-                transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                animation: `fadeInUp 0.6s ease ${index * 0.1}s forwards`,
-                opacity: 0,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "scale(1.05)";
-                e.currentTarget.style.boxShadow =
-                  "0 10px 25px rgba(0,0,0,0.25)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-                e.currentTarget.style.boxShadow =
-                  "0 8px 20px rgba(0,0,0,0.2)";
               }}
             >
-              <Statistic
-                title={
-                  <span style={{ color: "white", fontWeight: 500 }}>
-                    {card.title}
-                  </span>
-                }
-                value={card.value}
-                valueStyle={{
+              <Card
+                variant={false}
+                hoverable
+                style={{
+                  width: "100%",
+                  height: "150px",
+                  borderRadius: "20px",
+                  background: card.gradient,
                   color: "white",
-                  fontWeight: "bold",
-                  fontSize: "26px",
-                  textAlign:"center"
+                  boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "column",
+                  transition: "transform 0.3s ease, box-shadow 0.3s ease",
+                  animation: `fadeInUp 0.6s ease ${index * 0.1}s forwards`,
+                  opacity: 0,
                 }}
-              />
-            </Card>
-          </Col>
-        ))}
-      </Row>
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.05)";
+                  e.currentTarget.style.boxShadow =
+                    "0 10px 25px rgba(0,0,0,0.25)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow =
+                    "0 8px 20px rgba(0,0,0,0.2)";
+                }}
+              >
+                <Statistic
+                  title={
+                    <span style={{ color: "white", fontWeight: 500 }}>
+                      {card.title}
+                    </span>
+                  }
+                  value={card.value}
+                  valueStyle={{
+                    color: "white",
+                    fontWeight: "bold",
+                    fontSize: "26px",
+                    textAlign: "center",
+                  }}
+                />
+              </Card>
+            </Col>
+          ))}
+        </Row>
 
-      {/* Inline animation keyframes */}
-      <style>
-        {`
+        <style>
+          {`
           @keyframes fadeInUp {
             from {
               transform: translateY(20px);
@@ -237,11 +229,9 @@ export default function Dashboard() {
            
           }
         `}
-      </style>
-    </div>
-  </DashboardLayout>
-);
-
-
-
+        </style>
+      </div>
+      </Spin>
+    </DashboardLayout>
+  );
 }

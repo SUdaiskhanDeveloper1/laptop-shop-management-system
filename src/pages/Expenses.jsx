@@ -11,6 +11,7 @@ import {
   message,
   Space,
   Popconfirm,
+  DatePicker,
 } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import useCollectionRealtime from "../utils/useCollectionRealtime";
@@ -24,7 +25,7 @@ import {
 import { db } from "../firebase/config";
 
 export default function Expenses() {
-  const { data: expenses } = useCollectionRealtime("expenses");
+  const { data: expenses, loading: expensesLoading } = useCollectionRealtime("expenses");
   const [openAdd, setOpenAdd] = useState(false);
   const [viewModal, setViewModal] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
@@ -32,10 +33,13 @@ export default function Expenses() {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  // ✅ Add new expense
   async function onCreate(values) {
     try {
-      await addDoc(collection(db, "expenses"), values);
+      await addDoc(collection(db, "expenses"), {
+        ...values,
+        date: values.date.format("YYYY-MM-DD"), 
+      });
+
       message.success("Expense added successfully");
       setOpenAdd(false);
       form.resetFields();
@@ -44,12 +48,13 @@ export default function Expenses() {
       message.error("Error adding expense");
     }
   }
-
-  // ✅ Update expense
   async function onUpdate(values) {
     try {
       const expenseDoc = doc(db, "expenses", selectedExpense.id);
-      await updateDoc(expenseDoc, values);
+      await updateDoc(expenseDoc, {
+        ...values,
+        date: values.date.format("YYYY-MM-DD"),
+      });
       message.success("Expense updated successfully");
       setIsEditing(false);
       setSelectedExpense(null);
@@ -61,7 +66,6 @@ export default function Expenses() {
     }
   }
 
-  // ✅ Delete expense
   const handleDelete = async (id) => {
     try {
       await deleteDoc(doc(db, "expenses", id));
@@ -74,7 +78,6 @@ export default function Expenses() {
     }
   };
 
-  // ✅ Sort by first-come (oldest first)
   const sortedExpenses = expenses
     ? [...expenses].sort((a, b) => new Date(a.date) - new Date(b.date))
     : [];
@@ -90,8 +93,11 @@ export default function Expenses() {
         }
       >
         <div style={{ overflowX: "auto" }}>
-          <Table dataSource={sortedExpenses} rowKey="id" scroll={{ x: 800 }}>
-            <Table.Column title="#" render={(text, record, index) => index + 1} />
+          <Table loading={expensesLoading} dataSource={sortedExpenses} rowKey="id" scroll={{ x: 800 }}>
+            <Table.Column
+              title="#"
+              render={(text, record, index) => index + 1}
+            />
             <Table.Column title="Description" dataIndex="description" />
             <Table.Column title="Amount" dataIndex="amount" />
             <Table.Column title="Date" dataIndex="date" />
@@ -113,7 +119,6 @@ export default function Expenses() {
         </div>
       </Card>
 
-      {/* ➕ ADD EXPENSE MODAL */}
       <Modal
         open={openAdd}
         onCancel={() => setOpenAdd(false)}
@@ -134,8 +139,12 @@ export default function Expenses() {
               style={{ width: "100%" }}
             />
           </Form.Item>
-          <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-            <Input placeholder="YYYY-MM-DD" />
+          <Form.Item
+            name="date"
+            label="Date"
+            rules={[{ required: true, message: "Please select date" }]}
+          >
+            <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
           </Form.Item>
 
           <Form.Item>
@@ -146,7 +155,6 @@ export default function Expenses() {
         </Form>
       </Modal>
 
-      {/* 👁️ VIEW / EDIT MODAL */}
       <Modal
         open={viewModal}
         onCancel={() => setViewModal(false)}
@@ -199,11 +207,19 @@ export default function Expenses() {
             >
               <Input />
             </Form.Item>
-            <Form.Item name="amount" label="Amount" rules={[{ required: true }]}>
+            <Form.Item
+              name="amount"
+              label="Amount"
+              rules={[{ required: true }]}
+            >
               <InputNumber style={{ width: "100%" }} />
             </Form.Item>
-            <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-              <Input />
+            <Form.Item
+              name="date"
+              label="Date"
+              rules={[{ required: true, message: "Please select date" }]}
+            >
+              <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
             </Form.Item>
 
             <Form.Item>

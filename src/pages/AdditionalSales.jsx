@@ -11,6 +11,7 @@ import {
   message,
   Space,
   Popconfirm,
+  DatePicker,
 } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import useCollectionRealtime from "../utils/useCollectionRealtime";
@@ -25,7 +26,7 @@ import {
 import { db } from "../firebase/config";
 
 export default function AdditionalSales() {
-  const { data: salesRaw } = useCollectionRealtime("additional_sales");
+  const { data: salesRaw, loading: salesLoading } = useCollectionRealtime("additional_sales");
   const [openAdd, setOpenAdd] = useState(false);
   const [viewModal, setViewModal] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
@@ -33,22 +34,20 @@ export default function AdditionalSales() {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  const [currentPage, setCurrentPage] = useState(1); // ✅ Pagination state
-  const pageSize = 8; // ✅ Records per page
+  const [currentPage, setCurrentPage] = useState(1); 
+  const pageSize = 8; 
 
-  // ✅ Show newest first (latest added comes at the top)
   const sales = [...(salesRaw || [])].sort((a, b) => {
     const timeA = a.createdAt?.seconds || 0;
     const timeB = b.createdAt?.seconds || 0;
     return timeB - timeA;
   });
 
-  // ✅ Add new sale (store with timestamp)
   async function onCreate(values) {
     try {
       await addDoc(collection(db, "additional_sales"), {
         ...values,
-        createdAt: serverTimestamp(),
+        date: values.date.format("YYYY-MM-DD"),
       });
       message.success("Sale added successfully");
       setOpenAdd(false);
@@ -59,7 +58,6 @@ export default function AdditionalSales() {
     }
   }
 
-  // ✅ Update sale
   async function onUpdate(values) {
     try {
       const saleDoc = doc(db, "additional_sales", selectedSale.id);
@@ -75,7 +73,6 @@ export default function AdditionalSales() {
     }
   }
 
-  // ✅ Delete sale
   const handleDelete = async (id) => {
     try {
       await deleteDoc(doc(db, "additional_sales", id));
@@ -100,24 +97,25 @@ export default function AdditionalSales() {
       >
         <div style={{ overflowX: "auto" }}>
           <Table
+            loading={salesLoading}
             dataSource={sales}
             rowKey="id"
             scroll={{ x: 800 }}
             pagination={{
               pageSize,
-              onChange: (page) => setCurrentPage(page), // ✅ track page change
+              onChange: (page) => setCurrentPage(page), 
             }}
           >
             <Table.Column
               title="#"
               render={(text, record, index) =>
                 (currentPage - 1) * pageSize + index + 1
-              } // ✅ continuous numbering
+              } 
             />
             <Table.Column title="Description" dataIndex="description" />
             <Table.Column title="Quantity" dataIndex="qty" />
-            <Table.Column title="Purchase Price" dataIndex="purchasePrice" />
-            <Table.Column title="Sale Price" dataIndex="salePrice" />
+            <Table.Column title="Purchase Price Per Item" dataIndex="purchasePrice" />
+            <Table.Column title="Sale Price Per Item" dataIndex="salePrice" />
             <Table.Column title="Date" dataIndex="date" />
             <Table.Column
               title="Action"
@@ -137,7 +135,6 @@ export default function AdditionalSales() {
         </div>
       </Card>
 
-      {/* ADD SALE MODAL */}
       <Modal
         open={openAdd}
         onCancel={() => setOpenAdd(false)}
@@ -153,24 +150,37 @@ export default function AdditionalSales() {
             <Input placeholder="Enter sale description" />
           </Form.Item>
           <Form.Item name="qty" label="Quantity" rules={[{ required: true }]}>
-            <InputNumber style={{ width: "100%" }} placeholder="Enter quantity" />
+            <InputNumber
+              style={{ width: "100%" }}
+              placeholder="Enter quantity"
+            />
           </Form.Item>
           <Form.Item
             name="purchasePrice"
-            label="Purchase Price"
+            label="Purchase Price Per Item"
             rules={[{ required: true }]}
           >
-            <InputNumber style={{ width: "100%" }} placeholder="Enter purchase price" />
+            <InputNumber
+              style={{ width: "100%" }}
+              placeholder="Enter purchase price"
+            />
           </Form.Item>
           <Form.Item
-            name="salePrice"
+            name="salePrice Per Item"
             label="Sale Price"
             rules={[{ required: true }]}
           >
-            <InputNumber style={{ width: "100%" }} placeholder="Enter sale price" />
+            <InputNumber
+              style={{ width: "100%" }}
+              placeholder="Enter sale price"
+            />
           </Form.Item>
-          <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-            <Input placeholder="YYYY-MM-DD" />
+          <Form.Item
+            name="date"
+            label="Date of Supply:"
+            rules={[{ required: true, message: "Please select date" }]}
+          >
+            <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
           </Form.Item>
           <Form.Item>
             <Button htmlType="submit" type="primary" block>
@@ -180,7 +190,6 @@ export default function AdditionalSales() {
         </Form>
       </Modal>
 
-      {/* VIEW / EDIT MODAL */}
       <Modal
         open={viewModal}
         onCancel={() => setViewModal(false)}
@@ -190,11 +199,21 @@ export default function AdditionalSales() {
       >
         {selectedSale && !isEditing && (
           <Card style={{ marginBottom: 10 }}>
-            <p><strong>Description:</strong> {selectedSale.description}</p>
-            <p><strong>Quantity:</strong> {selectedSale.qty}</p>
-            <p><strong>Purchase Price:</strong> {selectedSale.purchasePrice}</p>
-            <p><strong>Sale Price:</strong> {selectedSale.salePrice}</p>
-            <p><strong>Date:</strong> {selectedSale.date}</p>
+            <p>
+              <strong>Description:</strong> {selectedSale.description}
+            </p>
+            <p>
+              <strong>Quantity:</strong> {selectedSale.qty}
+            </p>
+            <p>
+              <strong>Purchase Price:</strong> {selectedSale.purchasePrice}
+            </p>
+            <p>
+              <strong>Sale Price:</strong> {selectedSale.salePrice}
+            </p>
+            <p>
+              <strong>Date:</strong> {selectedSale.date}
+            </p>
 
             <Space style={{ marginTop: 10 }}>
               <Button

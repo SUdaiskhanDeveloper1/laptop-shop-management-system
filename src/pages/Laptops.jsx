@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import DashboardLayout from "../components/Layout/DashboardLayout";
 import {
   Table,
@@ -9,6 +9,7 @@ import {
   Descriptions,
   Modal,
   Popconfirm,
+  Spin,
 } from "antd";
 import { Link } from "react-router-dom";
 import { EyeOutlined } from "@ant-design/icons";
@@ -17,11 +18,10 @@ import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 
 export default function Laptops() {
-  const { data: laptops } = useCollectionRealtime("laptops");
+  const { data: laptops, loading: laptopsLoading } = useCollectionRealtime("laptops");
   const [selected, setSelected] = useState(null);
   const [viewOpen, setViewOpen] = useState(false);
 
-  // ✅ Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
@@ -41,24 +41,25 @@ export default function Laptops() {
     setViewOpen(true);
   };
 
-  // ✅ Sort by latest first (descending order), then by brand ascending (A → Z)
-  const sortedLaptops =
-    laptops?.slice().sort((a, b) => {
-      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
-      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
-
-      if (dateA > dateB) return -1;
-      if (dateA < dateB) return 1;
-
-      return (a.brand || "").localeCompare(b.brand || "");
-    }) || [];
-
+  const sortedLaptops = useMemo(() => {
+    return (
+      laptops?.slice().sort((a, b) => {
+        const dateA = a.createdAt?.toDate
+          ? a.createdAt.toDate()
+          : new Date(a.createdAt);
+        const dateB = b.createdAt?.toDate
+          ? b.createdAt.toDate()
+          : new Date(b.createdAt);
+        return dateB - dateA; 
+      }) || []
+    );
+  }, [laptops]);
   const columns = [
     {
       title: "#",
       key: "index",
       width: 60,
-      render: (text, record, index) => (currentPage - 1) * pageSize + index + 1, // ✅ Continuous numbering
+      render: (text, record, index) => (currentPage - 1) * pageSize + index + 1, 
     },
     { title: "Brand", dataIndex: "brand", key: "brand" },
     { title: "Generation", dataIndex: "Generation", key: "Generation" },
@@ -112,13 +113,14 @@ export default function Laptops() {
       >
         <div style={{ overflowX: "auto" }}>
           <Table
+            loading={laptopsLoading}
             columns={columns}
             dataSource={sortedLaptops}
             rowKey="id"
             scroll={{ x: 800 }}
             pagination={{
               pageSize,
-              onChange: (page) => setCurrentPage(page), // ✅ Track current page
+              onChange: (page) => setCurrentPage(page), 
             }}
           />
         </div>
@@ -132,7 +134,7 @@ export default function Laptops() {
         width={600}
         centered
       >
-        {selected && (
+        {selected ? (
           <>
             <Descriptions bordered column={1}>
               <Descriptions.Item label="Brand">
@@ -185,6 +187,8 @@ export default function Laptops() {
               </Popconfirm>
             </div>
           </>
+        ) : (
+          <Spin size="large" style={{ width: "100%", padding: 50 }} />
         )}
       </Modal>
     </DashboardLayout>

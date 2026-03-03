@@ -17,7 +17,7 @@ export default function Login() {
       messageApi.open({
         type: 'success',
         content: '✅ Logged in successfully!',
-        duration: 3,
+        // duration: 1,
       })
       setTimeout(() => navigate('/dashboard'), 2000)
     } catch (error) {
@@ -32,7 +32,7 @@ export default function Login() {
       messageApi.open({
         type: 'error',
         content: errorMsg,
-        duration: 3,
+        duration: 1,
       })
     } finally {
       setLoading(false)
@@ -125,8 +125,9 @@ export default function Login() {
           </Form.Item>
         </Form>
 
-        <p style={{ marginTop: 16, color: '#888', fontSize: 13 }}>
-          © 2025 Laptop Shop Management System
+        <p style={{ marginTop: 16, color: '#888', fontSize: 15 }}>
+            © {new Date().getFullYear()} Tech House. All rights reserved.
+
         </p>
       </Card>
     </div>

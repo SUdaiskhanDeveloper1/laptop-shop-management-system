@@ -1,7 +1,7 @@
 import React from 'react'
 import { Layout, Menu } from 'antd'
 import { Link, useLocation } from 'react-router-dom'
-import { DashboardOutlined, LaptopOutlined, SwapOutlined, ShoppingOutlined, FileTextOutlined, SettingOutlined } from '@ant-design/icons'
+import { DashboardOutlined, LaptopOutlined, ShoppingOutlined, FileTextOutlined, SettingOutlined } from '@ant-design/icons'
 
 const { Sider } = Layout
 

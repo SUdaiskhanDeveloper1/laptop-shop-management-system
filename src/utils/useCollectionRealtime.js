@@ -4,9 +4,11 @@ import { db } from "../firebase/config";
 
 export default function useCollectionRealtime(collectionName) {
   const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    
+    setLoading(true);
+
     const unsub = onSnapshot(
       collection(db, collectionName),
       (snapshot) => {
@@ -16,14 +18,16 @@ export default function useCollectionRealtime(collectionName) {
         }));
         
         setData(list);
+        setLoading(false);
       },
       (error) => {
         console.error("Firestore error:", error);
+        setLoading(false);
       }
     );
 
     return () => unsub();
   }, [collectionName]);
 
-  return { data };
+  return { data, loading };
 }
