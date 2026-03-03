@@ -42,7 +42,7 @@ export const addLaptop = async (data) => {
       ...data,
       createdAt: new Date().toISOString(),
     });
-    console.log("Laptop added with ID:", docRef.id);
+    // console.log("Laptop added with ID:", docRef.id);
     return docRef.id;
   } catch (error) {
     console.error("Error adding laptop:", error);
