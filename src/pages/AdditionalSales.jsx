@@ -1,5 +1,8 @@
 import React, { useState } from "react";
+import { apiFetch } from '../api';
 import DashboardLayout from "../components/Layout/DashboardLayout";
+import useCollectionRealtime from "../utils/useCollectionRealtime";
+import { useData } from "../context/DataContext";
 import {
   Card,
   Table,
@@ -14,19 +17,10 @@ import {
   DatePicker,
 } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
-import useCollectionRealtime from "../utils/useCollectionRealtime";
-import {
-  addDoc,
-  collection,
-  doc,
-  updateDoc,
-  deleteDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db } from "../firebase/config";
 
 export default function AdditionalSales() {
   const { data: salesRaw, loading: salesLoading } = useCollectionRealtime("additional_sales");
+  const { mutateCollection } = useData();
   const [openAdd, setOpenAdd] = useState(false);
   const [viewModal, setViewModal] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
@@ -38,17 +32,25 @@ export default function AdditionalSales() {
   const pageSize = 8; 
 
   const sales = [...(salesRaw || [])].sort((a, b) => {
-    const timeA = a.createdAt?.seconds || 0;
-    const timeB = b.createdAt?.seconds || 0;
+    const timeA = new Date(a.createdAt).getTime() || 0;
+    const timeB = new Date(b.createdAt).getTime() || 0;
     return timeB - timeA;
   });
 
   async function onCreate(values) {
     try {
-      await addDoc(collection(db, "additional_sales"), {
+      const payload = {
         ...values,
         date: values.date.format("YYYY-MM-DD"),
+        createdAt: new Date().toISOString()
+      };
+      const res = await apiFetch(`/additional_sales`, { 
+        method: 'POST', 
+        body: JSON.stringify(payload) 
       });
+
+      mutateCollection('additional_sales', 'add', { ...payload, id: res.id });
+      
       message.success("Sale added successfully");
       setOpenAdd(false);
       form.resetFields();
@@ -60,8 +62,13 @@ export default function AdditionalSales() {
 
   async function onUpdate(values) {
     try {
-      const saleDoc = doc(db, "additional_sales", selectedSale.id);
-      await updateDoc(saleDoc, values);
+      await apiFetch(`/additional_sales/${selectedSale.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(values)
+      });
+      
+      mutateCollection('additional_sales', 'update', { ...values, id: selectedSale.id });
+      
       message.success("Sale updated successfully");
       setIsEditing(false);
       setSelectedSale(null);
@@ -75,7 +82,8 @@ export default function AdditionalSales() {
 
   const handleDelete = async (id) => {
     try {
-      await deleteDoc(doc(db, "additional_sales", id));
+      await apiFetch(`/additional_sales/${id}`, { method: 'DELETE' });
+      mutateCollection('additional_sales', 'delete', { id });
       message.success("Sale deleted successfully");
       setViewModal(false);
       setSelectedSale(null);
@@ -166,7 +174,7 @@ export default function AdditionalSales() {
             />
           </Form.Item>
           <Form.Item
-            name="salePrice Per Item"
+            name="salePrice"
             label="Sale Price"
             rules={[{ required: true }]}
           >

@@ -1,49 +1,46 @@
-import { db } from "./config";
-import {
-  collection,
-  addDoc,
-  getDocs,
-  getDoc,
-  doc,
-  updateDoc,
-  deleteDoc,
-  query,
-  orderBy,
-} from "firebase/firestore";
+import { apiFetch } from "../api";
 
 export async function exportCollectionCSV(collectionName) {
-  const snapshot = await getDocs(collection(db, collectionName));
-  if (snapshot.empty) return null;
+  try {
+    // We can use the specialized routes here if available
+    const specializedRoutes = ['laptops', 'sales', 'purchases', 'suppliers', 'expenses', 'additional_sales'];
+    const endpoint = specializedRoutes.includes(collectionName) ? `/${collectionName}` : `/collections/${collectionName}`;
+    
+    const items = await apiFetch(endpoint);
+    if (!items || items.length === 0) return null;
 
-  const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  const keys = Object.keys(items[0]);
-  const csv = [
-    keys.join(","),
-    ...items.map((item) => keys.map((key) => `"${item[key] || ""}"`).join(",")),
-  ].join("\n");
+    const keys = Object.keys(items[0]).filter(k => k !== 'id');
+    const csv = [
+      keys.join(","),
+      ...items.map((item) => keys.map((key) => `"${item[key] || ""}"`).join(",")),
+    ].join("\n");
 
-  return csv;
+    return csv;
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
 }
 
 export async function updateSale(saleData) {
   const { id, ...data } = saleData;
-  const saleDoc = doc(db, "sales", id);
-  return await updateDoc(saleDoc, data);
+  return await apiFetch(`/sales/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
 }
 
 export async function deleteSale(id) {
-  const saleDoc = doc(db, "sales", id);
-  return await deleteDoc(saleDoc);
+  return await apiFetch(`/sales/${id}`, { method: 'DELETE' });
 }
 
 export const addLaptop = async (data) => {
   try {
-    const docRef = await addDoc(collection(db, "laptops"), {
-      ...data,
-      createdAt: new Date().toISOString(),
+    const res = await apiFetch('/laptops', {
+      method: 'POST',
+      body: JSON.stringify(data)
     });
-    // console.log("Laptop added with ID:", docRef.id);
-    return docRef.id;
+    return res.id;
   } catch (error) {
     console.error("Error adding laptop:", error);
   }
@@ -51,18 +48,19 @@ export const addLaptop = async (data) => {
 
 export const getLaptops = async () => {
   try {
-    const q = query(collection(db, "laptops"), orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    return await apiFetch('/laptops');
   } catch (error) {
     console.error("Error fetching laptops:", error);
+    return [];
   }
 };
 
 export const updateLaptop = async (id, newData) => {
   try {
-    const docRef = doc(db, "laptops", id);
-    await updateDoc(docRef, newData);
+    await apiFetch(`/laptops/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(newData)
+    });
     console.log("Laptop updated:", id);
   } catch (error) {
     console.error("Error updating laptop:", error);
@@ -71,7 +69,7 @@ export const updateLaptop = async (id, newData) => {
 
 export const deleteLaptop = async (id) => {
   try {
-    await deleteDoc(doc(db, "laptops", id));
+    await apiFetch(`/laptops/${id}`, { method: 'DELETE' });
     console.log("Laptop deleted:", id);
   } catch (error) {
     console.error("Error deleting laptop:", error);
@@ -80,11 +78,11 @@ export const deleteLaptop = async (id) => {
 
 export const addSupplier = async (data) => {
   try {
-    const docRef = await addDoc(collection(db, "suppliers"), {
-      ...data,
-      createdAt: new Date().toISOString(),
+    const res = await apiFetch('/suppliers', {
+      method: 'POST',
+      body: JSON.stringify(data)
     });
-    return docRef.id;
+    return res.id;
   } catch (error) {
     console.error("Error adding supplier:", error);
   }
@@ -92,17 +90,19 @@ export const addSupplier = async (data) => {
 
 export const getSuppliers = async () => {
   try {
-    const snapshot = await getDocs(collection(db, "suppliers"));
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    return await apiFetch('/suppliers');
   } catch (error) {
     console.error("Error fetching suppliers:", error);
+    return [];
   }
 };
 
 export const updateSupplier = async (id, newData) => {
   try {
-    const docRef = doc(db, "suppliers", id);
-    await updateDoc(docRef, newData);
+    await apiFetch(`/suppliers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(newData)
+    });
   } catch (error) {
     console.error("Error updating supplier:", error);
   }
@@ -110,7 +110,7 @@ export const updateSupplier = async (id, newData) => {
 
 export const deleteSupplier = async (id) => {
   try {
-    await deleteDoc(doc(db, "suppliers", id));
+    await apiFetch(`/suppliers/${id}`, { method: 'DELETE' });
   } catch (error) {
     console.error("Error deleting supplier:", error);
   }
@@ -118,11 +118,11 @@ export const deleteSupplier = async (id) => {
 
 export const addPurchase = async (data) => {
   try {
-    const docRef = await addDoc(collection(db, "purchases"), {
-      ...data,
-      createdAt: new Date().toISOString(),
+    const res = await apiFetch('/purchases', {
+      method: 'POST',
+      body: JSON.stringify(data)
     });
-    return docRef.id;
+    return res.id;
   } catch (error) {
     console.error("Error adding purchase:", error);
   }
@@ -130,13 +130,31 @@ export const addPurchase = async (data) => {
 
 export const addSale = async (data) => {
   try {
-    const docRef = await addDoc(collection(db, "sales"), {
-      ...data,
-      createdAt: new Date().toISOString(),
+    const res = await apiFetch('/sales', {
+      method: 'POST',
+      body: JSON.stringify(data)
     });
-    return docRef.id;
+    return res.id;
   } catch (error) {
     console.error("Error adding sale:", error);
+  }
+};
+
+export const getSales = async () => {
+  try {
+    return await apiFetch('/sales');
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+};
+
+export const getPurchases = async () => {
+  try {
+    return await apiFetch('/purchases');
+  } catch (error) {
+    console.error(error);
+    return [];
   }
 };
 
@@ -162,24 +180,9 @@ export const getProfitSummary = async () => {
   }
 };
 
-// import { Timestamp } from "firebase/firestore";
-
-export const getSales = async () => {
-  const q = query(collection(db, "sales"), orderBy("createdAt", "desc"));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-};
-
-export const getPurchases = async () => {
-  const q = query(collection(db, "purchases"), orderBy("createdAt", "desc"));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-};
-
 export const getTotals = async () => {
   try {
-    const laptopsSnap = await getDocs(collection(db, "laptops"));
-    const laptops = laptopsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const laptops = await getLaptops();
     const totalLaptops = laptops.length;
     const totalStock = laptops.reduce(
       (s, l) => s + (Number(l.quantity) || 0),
@@ -188,6 +191,8 @@ export const getTotals = async () => {
 
     const sales = await getSales();
     const purchases = await getPurchases();
+    const expenses = await apiFetch('/expenses').catch(() => []);
+    
     const totalSalesCount = sales.length;
     const totalPurchasesCount = purchases.length;
     const totalSalesAmount = sales.reduce(
@@ -198,6 +203,12 @@ export const getTotals = async () => {
       (s, it) => s + Number(it.totalCost || it.amount || 0),
       0
     );
+    const totalExpenseAmount = expenses.reduce(
+      (s, it) => s + Number(it.amount || 0),
+      0
+    );
+
+    const profit = totalSalesAmount - totalPurchasesAmount - totalExpenseAmount;
 
     return {
       totalLaptops,
@@ -214,8 +225,8 @@ export const getTotals = async () => {
   }
 };
 
-function isoDateToString(tsOrIso) {
+export function isoDateToString(tsOrIso) {
   if (!tsOrIso) return "";
-  if (tsOrIso.toDate) return tsOrIso.toDate().toISOString();
+  if (tsOrIso.toDate) return tsOrIso.toDate().toISOString(); // fallback for old firebase data if any
   return typeof tsOrIso === "string" ? tsOrIso : "";
 }

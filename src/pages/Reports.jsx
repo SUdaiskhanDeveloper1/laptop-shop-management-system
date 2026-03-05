@@ -1,72 +1,40 @@
-import React, { useEffect, useState } from 'react'
+import React, { useMemo } from 'react'
 import DashboardLayout from '../components/Layout/DashboardLayout'
 import { Card, Button, Row, Col, Statistic, message, Spin } from 'antd'
-import { getFirestore, collection, getDocs } from 'firebase/firestore'
-import { db } from '../firebase/config'
+import { useData } from '../context/DataContext'
 import { exportCollectionCSV } from '../firebase/services'
 
 export default function Reports() {
-  const [totals, setTotals] = useState({
-    totalSalesAmount: 0,
-    totalAdditionalSales: 0,
-    totalPurchasesAmount: 0,
-    totalExpensesAmount: 0,
-    profit: 0
-  })
-  const [loading, setLoading] = useState(true);
+  const { collections, initialized } = useData();
 
-  useEffect(() => {
-    async function loadTotals() {
-      setLoading(true)
-      try {
-        const salesSnap = await getDocs(collection(db, 'sales'))
-        const purchasesSnap = await getDocs(collection(db, 'purchases'))
-        const expensesSnap = await getDocs(collection(db, 'expenses'))
-        const additionalSalesSnap = await getDocs(collection(db, 'additional_sales'))
+  const totals = useMemo(() => {
+    if (!initialized) return null;
 
-        const totalSalesAmount = salesSnap.docs.reduce((sum, doc) => {
-          const data = doc.data()
-          return sum + (data.totalSale || 0)
-        }, 0)
+    const sales = collections['sales'] || [];
+    const purchases = collections['purchases'] || [];
+    const expenses = collections['expenses'] || [];
+    const additionalSales = collections['additional_sales'] || [];
 
-        const totalAdditionalSales = additionalSalesSnap.docs.reduce((sum, doc) => {
-          const data = doc.data()
-          const salePrice = Number(data.salePrice || 0)
-          const qty = Number(data.qty || 1)
-          return sum + salePrice * qty
-        }, 0)
+    const totalSalesAmount = sales.reduce((sum, s) => sum + Number(s.totalSale || s.amount || 0), 0);
+    const totalPurchasesAmount = purchases.reduce((sum, p) => sum + Number(p.totalCost || p.purchasePrice || p.amount || 0), 0);
+    const totalExpenseAmount = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    
+    const totalAdditionalSalesAmount = additionalSales.reduce((sum, s) => {
+      const salePrice = Number(s.salePrice || 0);
+      const qty = Number(s.qty || 1);
+      return sum + (salePrice * qty);
+    }, 0);
 
-        const totalPurchasesAmount = purchasesSnap.docs.reduce((sum, doc) => {
-          const data = doc.data()
-          const qty = data.quantity || 0
-          const price = data.purchasePrice || 0
-          return sum + qty * price
-        }, 0)
+    const profit = totalSalesAmount - totalPurchasesAmount - totalExpenseAmount;
 
-        const totalExpensesAmount = expensesSnap.docs.reduce((sum, doc) => {
-          const data = doc.data()
-          return sum + (data.amount || 0)
-        }, 0)
-
-        const profit = totalSalesAmount - (totalPurchasesAmount + totalExpensesAmount)
-
-        setTotals({
-          totalSalesAmount,
-          totalAdditionalSales,
-          totalPurchasesAmount,
-          totalExpensesAmount,
-          profit
-        })
-      } catch (error) {
-        console.error('Error fetching totals:', error)
-        message.error('Error loading report data')
-      } finally {
-        setLoading(false) 
-      }
-    }
-
-    loadTotals()
-  }, [])
+    return {
+      totalSalesAmount,
+      totalPurchasesAmount,
+      totalExpenseAmount,
+      totalAdditionalSalesAmount,
+      profit
+    };
+  }, [collections, initialized]);
 
   const downloadCSV = async (collectionName) => {
     const csv = await exportCollectionCSV(collectionName)
@@ -80,46 +48,55 @@ export default function Reports() {
     URL.revokeObjectURL(url)
   }
 
-  return (
-    <DashboardLayout>
-      {loading ? (
+  if (!initialized) {
+    return (
+      <DashboardLayout>
         <div style={{ textAlign: 'center', padding: 80 }}>
           <Spin size="large" tip="Loading report data..." />
         </div>
-      ) : (
-        <>
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Card>
-                <Statistic title="Total Sales" value={totals.totalSalesAmount.toFixed(2)} />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Card>
-                <Statistic
-                  title="Total Additional Sales"
-                  value={totals.totalAdditionalSales ? totals.totalAdditionalSales.toFixed(2) : '0.00'}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Card>
-                <Statistic title="Total Expenses" value={totals.totalExpensesAmount.toFixed(2)} />
-              </Card>
-            </Col>
-          </Row>
+      </DashboardLayout>
+    );
+  }
 
-          <Card style={{ marginTop: 24 }} title="Export Collections">
-            <Button onClick={() => downloadCSV('sales')}>Export Sales CSV</Button>
-            <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('expenses')}>
-              Export Expense CSV
-            </Button>
-            <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('additional_sales')}>
-              Export Additional Sales CSV
-            </Button>
+  return (
+    <DashboardLayout>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} md={8} lg={4}>
+          <Card>
+            <Statistic title="Total Sales" value={totals.totalSalesAmount.toFixed(2)} />
           </Card>
-        </>
-      )}
+        </Col>
+        <Col xs={24} sm={12} md={8} lg={4}>
+          <Card>
+            <Statistic title="Additional Sales" value={totals.totalAdditionalSalesAmount.toFixed(2)} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={8} lg={4}>
+          <Card>
+            <Statistic title="Total Purchases" value={totals.totalPurchasesAmount.toFixed(2)} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={8} lg={4}>
+          <Card>
+            <Statistic title="Total Expenses" value={totals.totalExpenseAmount.toFixed(2)} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={8} lg={4}>
+          <Card>
+            <Statistic title="Net Profit" value={totals.profit.toFixed(2)} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Card style={{ marginTop: 24 }} title="Export Collections">
+        <Button onClick={() => downloadCSV('sales')}>Export Sales CSV</Button>
+        <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('expenses')}>
+          Export Expense CSV
+        </Button>
+        <Button style={{ marginLeft: 8 }} onClick={() => downloadCSV('additional_sales')}>
+          Export Additional Sales CSV
+        </Button>
+      </Card>
     </DashboardLayout>
   )
 }

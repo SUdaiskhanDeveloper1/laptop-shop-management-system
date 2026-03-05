@@ -7,9 +7,7 @@ import './styles.css'
 import { Theme } from './extra/theme'
 
 createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <BrowserRouter theme={Theme}>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
+  <BrowserRouter theme={Theme}>
+    <App />
+  </BrowserRouter>
 )

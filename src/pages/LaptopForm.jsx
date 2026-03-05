@@ -12,8 +12,9 @@ import {
 } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { addLaptop, updateLaptop } from "../firebase/services";
-import { doc, getDoc, Timestamp } from "firebase/firestore";
-import { db } from "../firebase/config";
+import { apiFetch } from "../api";
+import { useData } from "../context/DataContext";
+
 import { CloseOutlined } from "@ant-design/icons";
 import AccessoryToggleList from "../components/AccessoryToggleList";
 
@@ -22,28 +23,32 @@ export default function LaptopForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [loading, setLoading] = useState(false);
+  const { mutateCollection } = useData();
 
   useEffect(() => {
     async function load() {
       if (!id) return;
-      const d = await getDoc(doc(db, "laptops", id));
-      if (d.exists()) {
-        const data = d.data();
-        form.setFieldsValue({
-          brand: data.brand || "",
-          Generation: data.Generation || "",
-          processor: data.processor || "",
-          ram: data.ram || "",
-          storage: data.storage || "",
-          quantity: data.quantity || 0,
-          purchasePrice: data.purchasePrice || 0,
-          supplierName: data.supplierName || "",
-          accessories: data.accessories || [],
-        });
+      try {
+        const data = await apiFetch(`/laptops/${id}`);
+        if (data) {
+          form.setFieldsValue({
+            brand: data.brand || "",
+            Generation: data.Generation || "",
+            processor: data.processor || "",
+            ram: data.ram || "",
+            storage: data.storage || "",
+            quantity: data.quantity || 0,
+            purchasePrice: data.purchasePrice || 0,
+            supplierName: data.supplierName || "",
+            accessories: data.accessories || [],
+          });
+        }
+      } catch (e) {
+        console.error("Error loading laptop:", e);
       }
     }
     load();
-  }, [id]);
+  }, [id, form]);
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -61,9 +66,16 @@ export default function LaptopForm() {
       };
       if (id) {
         await updateLaptop(id, payload);
+        mutateCollection("laptops", "update", { ...payload, id });
         message.success("Updated");
       } else {
-        await addLaptop({ ...payload, createdAt: Timestamp.now() });
+        const createdAt = new Date().toISOString();
+        const newId = await addLaptop({ ...payload, createdAt });
+        mutateCollection("laptops", "add", {
+          ...payload,
+          id: newId,
+          createdAt,
+        });
         message.success("Added");
       }
       navigate("/laptops");
@@ -93,14 +105,26 @@ export default function LaptopForm() {
         >
           <Row gutter={[56, 24]}>
             <Col span={12}>
-              <Form.Item name="brand" label="Brand Name:">
+              <Form.Item
+                name="brand"
+                label="Brand Name:"
+                rules={[{ required: true, message: "Brand name is required" }]}
+              >
                 <Input />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item name="Generation" label="Generation & Processor:">
-                {/* <Form.Item name="processor" label="Processor"><Input /></Form.Item> */}
 
+            <Col span={12}>
+              <Form.Item
+                name="Generation"
+                label="Generation & Processor:"
+                rules={[
+                  {
+                    required: true,
+                    message: "Generation & Processor is required",
+                  },
+                ]}
+              >
                 <Input />
               </Form.Item>
             </Col>
@@ -108,12 +132,21 @@ export default function LaptopForm() {
 
           <Row gutter={[56, 24]}>
             <Col span={12}>
-              <Form.Item name="ram" label="RAM:">
+              <Form.Item
+                name="ram"
+                label="RAM:"
+                rules={[{ required: true, message: "RAM is required" }]}
+              >
                 <Input />
               </Form.Item>
             </Col>
+
             <Col span={12}>
-              <Form.Item name="storage" label="Storage:">
+              <Form.Item
+                name="storage"
+                label="Storage:"
+                rules={[{ required: true, message: "Storage is required" }]}
+              >
                 <Input />
               </Form.Item>
             </Col>
@@ -121,35 +154,67 @@ export default function LaptopForm() {
 
           <Row gutter={[56, 24]}>
             <Col span={12}>
-              <Form.Item name="purchasePrice" label="Total Purchase Price:">
+              <Form.Item
+                name="purchasePrice"
+                label="Total Purchase Price:"
+                rules={[
+                  { required: true, message: "Purchase price is required" },
+                ]}
+              >
                 <InputNumber style={{ width: "100%" }} min={0} />
               </Form.Item>
             </Col>
+
             <Col span={12}>
-              <Form.Item name="quantity" label="Quantity:">
-                <InputNumber style={{ width: "100%" }} min={0} />
+              <Form.Item
+                name="quantity"
+                label="Quantity:"
+                rules={[{ required: true, message: "Quantity is required" }]}
+              >
+                <InputNumber style={{ width: "100%" }} min={1} />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={[56, 24]}>
             <Col span={12}>
-              <Form.Item name="supplierName" label="Supplier Name:">
+              <Form.Item
+                name="supplierName"
+                label="Supplier Name:"
+                rules={[
+                  { required: true, message: "Supplier name is required" },
+                ]}
+              >
                 <Input />
               </Form.Item>
             </Col>
+
             <Col span={12}>
-              <Form.Item name="accessories" label="Accessories:">
+              <Form.Item
+                name="accessories"
+                label="Accessories:"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select at least one accessory",
+                  },
+                ]}
+              >
                 <AccessoryToggleList />
               </Form.Item>
             </Col>
           </Row>
 
           <Form.Item
-            style={{ marginTop:10, justifyContent: "center", display: "flex", width: "100%" }}
+            style={{
+              marginTop: 10,
+              justifyContent: "center",
+              display: "flex",
+              width: "100%",
+            }}
           >
             <Button
-              style={{ width: "100px" }} 
+              style={{ width: "100px" }}
               htmlType="submit"
               type="primary"
               loading={loading}

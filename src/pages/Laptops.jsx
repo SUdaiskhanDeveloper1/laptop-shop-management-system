@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from "react";
+import { apiFetch } from "../api";
 import DashboardLayout from "../components/Layout/DashboardLayout";
+import useCollectionRealtime from "../utils/useCollectionRealtime";
+import { useData } from "../context/DataContext";
 import {
   Table,
   Button,
@@ -10,24 +13,26 @@ import {
   Modal,
   Popconfirm,
   Spin,
+  Input,
 } from "antd";
 import { Link } from "react-router-dom";
-import { EyeOutlined } from "@ant-design/icons";
-import useCollectionRealtime from "../utils/useCollectionRealtime";
-import { deleteDoc, doc } from "firebase/firestore";
-import { db } from "../firebase/config";
+import { EyeOutlined, SearchOutlined } from "@ant-design/icons";
 
 export default function Laptops() {
-  const { data: laptops, loading: laptopsLoading } = useCollectionRealtime("laptops");
+  const { data: laptops, loading: laptopsLoading } =
+    useCollectionRealtime("laptops");
+  const { mutateCollection } = useData();
   const [selected, setSelected] = useState(null);
   const [viewOpen, setViewOpen] = useState(false);
 
+  const [searchText, setSearchText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
   async function handleDelete(id) {
     try {
-      await deleteDoc(doc(db, "laptops", id));
+      await apiFetch(`/laptops/${id}`, { method: "DELETE" });
+      mutateCollection("laptops", "delete", { id });
       message.success("Deleted successfully");
       setViewOpen(false);
     } catch (e) {
@@ -50,16 +55,30 @@ export default function Laptops() {
         const dateB = b.createdAt?.toDate
           ? b.createdAt.toDate()
           : new Date(b.createdAt);
-        return dateB - dateA; 
+        return dateB - dateA;
       }) || []
     );
   }, [laptops]);
+
+  // Filter laptops based on search
+  const filteredLaptops = sortedLaptops.filter((laptop) => {
+    const brand = laptop?.brand?.toLowerCase() || "";
+    const generation = laptop?.Generation?.toLowerCase() || "";
+    const supplier = laptop?.supplierName?.toLowerCase() || "";
+    const search = searchText.toLowerCase();
+    return (
+      brand.includes(search) ||
+      generation.includes(search) ||
+      supplier.includes(search)
+    );
+  });
+
   const columns = [
     {
       title: "#",
       key: "index",
       width: 60,
-      render: (text, record, index) => (currentPage - 1) * pageSize + index + 1, 
+      render: (text, record, index) => (currentPage - 1) * pageSize + index + 1,
     },
     { title: "Brand", dataIndex: "brand", key: "brand" },
     { title: "Generation", dataIndex: "Generation", key: "Generation" },
@@ -75,11 +94,7 @@ export default function Laptops() {
       dataIndex: "purchasePrice",
       key: "purchasePrice",
     },
-    {
-      title: "Supplier Name",
-      dataIndex: "supplierName",
-      key: "supplierName",
-    },
+    { title: "Supplier Name", dataIndex: "supplierName", key: "supplierName" },
     {
       title: "Added On",
       dataIndex: "createdAt",
@@ -106,21 +121,31 @@ export default function Laptops() {
       <Card
         title="Laptops"
         extra={
-          <Link to="/laptops/add">
-            <Button type="primary">Add Laptop</Button>
-          </Link>
+          <Space style={{ gap: "20px" }}>
+            <Input
+              placeholder="Search by Brand, Generation, Supplier"
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+              style={{ width: 300 }}
+            />
+            <Link to="/laptops/add">
+              <Button type="primary">Add Laptop</Button>
+            </Link>
+          </Space>
         }
       >
         <div style={{ overflowX: "auto" }}>
           <Table
             loading={laptopsLoading}
             columns={columns}
-            dataSource={sortedLaptops}
+            dataSource={filteredLaptops}
             rowKey="id"
             scroll={{ x: 800 }}
             pagination={{
               pageSize,
-              onChange: (page) => setCurrentPage(page), 
+              onChange: (page) => setCurrentPage(page),
             }}
           />
         </div>
@@ -168,7 +193,7 @@ export default function Laptops() {
               style={{
                 display: "flex",
                 justifyContent: "space-evenly",
-                marginTop: "30px",
+                marginTop: 30,
               }}
             >
               <Link to={`/laptops/edit/${selected.id}`}>

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
+import { apiFetch } from '../api';
 import DashboardLayout from "../components/Layout/DashboardLayout";
 import {
-  Table,
   Button,
   Space,
   Card,
@@ -13,16 +13,22 @@ import {
   Select,
   InputNumber,
   Input,
+  Row,
+  Col,
+  Empty,
+  Spin,
 } from "antd";
-import { EyeOutlined } from "@ant-design/icons";
+import { EyeOutlined, DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import { addPurchase } from "../firebase/services";
-import { updateDoc, deleteDoc, doc } from "firebase/firestore";
-import { db } from "../firebase/config";
+
+
 import useCollectionRealtime from "../utils/useCollectionRealtime";
+import { useData } from "../context/DataContext";
 
 export default function Purchases() {
   const { data: purchases, loading: purchasesLoading } = useCollectionRealtime("purchases");
   const { data: laptops, loading: laptopsLoading } = useCollectionRealtime("laptops");
+  const { mutateCollection } = useData();
 
   const [selected, setSelected] = useState(null);
   const [viewOpen, setViewOpen] = useState(false);
@@ -31,7 +37,17 @@ export default function Purchases() {
 
   async function handleDelete(id) {
     try {
-      await deleteDoc(doc(db, "purchases", id));
+      const purchase = purchases.find(p => p.id === id);
+      await apiFetch(`/purchases/${id}`, { method: 'DELETE' });
+      
+      mutateCollection('purchases', 'delete', { id });
+      if (purchase && purchase.laptopId) {
+          const laptop = laptops.find(l => l.id === purchase.laptopId);
+          if (laptop) {
+              mutateCollection('laptops', 'update', { ...laptop, quantity: (Number(laptop.quantity) || 0) - (Number(purchase.quantity) || 0) });
+          }
+      }
+
       message.success("Deleted successfully");
       setViewOpen(false);
     } catch (e) {
@@ -50,17 +66,31 @@ export default function Purchases() {
       const laptop = laptops.find((l) => l.id === values.laptopId);
 
       if (selected) {
-        await updateDoc(doc(db, "purchases", selected.id), {
+        await apiFetch(`/purchases/${selected.id}`, { method: 'PUT', body: JSON.stringify({
           ...values,
           laptopBrand: laptop?.brand || "",
-        });
+        }) });
+        
+        mutateCollection('purchases', 'update', { ...values, laptopBrand: laptop?.brand || "", id: selected.id });
+        const diff = values.quantity - selected.quantity;
+        if (laptop) {
+            mutateCollection('laptops', 'update', { ...laptop, quantity: (Number(laptop.quantity) || 0) + diff });
+        }
+
         message.success("Purchase updated successfully");
       } else {
-        await addPurchase({
+        const purchaseData = {
           ...values,
           laptopBrand: laptop?.brand || "",
-          createdAt: new Date(),
-        });
+          createdAt: new Date().toISOString(),
+        };
+        const purchaseId = await addPurchase(purchaseData);
+        
+        mutateCollection('purchases', 'add', { ...purchaseData, id: purchaseId });
+        if (laptop) {
+            mutateCollection('laptops', 'update', { ...laptop, quantity: (Number(laptop.quantity) || 0) + (Number(values.quantity) || 0) });
+        }
+
         message.success("Purchase added successfully");
       }
 
@@ -73,37 +103,9 @@ export default function Purchases() {
     }
   }
 
-  const columns = [
-    {
-      title: "#",
-      key: "index",
-      render: (text, record, index) => index + 1,
-      width: 60,
-    },
-    { title: "Laptop", dataIndex: "laptopBrand", key: "laptopBrand" },
-    { title: "Supplier", dataIndex: "supplierName", key: "supplierName" },
-    { title: "Qty", dataIndex: "quantity", key: "quantity" },
-
-    {
-      title: "Purchased Date",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (val) => {
-        if (!val) return "";
-        if (val.toDate) return new Date(val.toDate()).toLocaleString();
-        return new Date(val).toLocaleString();
-      },
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (text, record) => (
-        <Space>
-          <Button icon={<EyeOutlined />} onClick={() => handleView(record)} />
-        </Space>
-      ),
-    },
-  ];
+  const sortedPurchases = purchases
+    ? [...purchases].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    : [];
 
   return (
     <DashboardLayout>
@@ -123,20 +125,73 @@ export default function Purchases() {
           </Button>
         }
       >
-        <Table
-          loading={purchasesLoading || laptopsLoading}
-          columns={columns}
-          dataSource={
-            purchases
-              ? [...purchases].sort(
-                  (a, b) =>
-                    new Date(b.createdAt?.toDate?.() || b.createdAt) -
-                    new Date(a.createdAt?.toDate?.() || a.createdAt)
-                )
-              : []
-          }
-          rowKey="id"
-        />
+        <Spin spinning={purchasesLoading || laptopsLoading}/>
+          {sortedPurchases.length === 0 ? (
+            <Empty description="No Purchases" />
+          ) : (
+            <Row gutter={[16, 16]}>
+              {sortedPurchases.map((purchase, index) => (
+                <Col xs={24} sm={12} lg={8} key={purchase.id}>
+                  <Card
+                    hoverable
+                    className="purchase-card"
+                    style={{
+                      borderLeft: '4px solid #1890ff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ marginBottom: '12px' }}>
+                      <h3 style={{ margin: '0 0 8px 0' }}>{purchase.laptopBrand}</h3>
+                      <p style={{ margin: '0', color: '#666' }}>
+                        <strong>Supplier:</strong> {purchase.supplierName}
+                      </p>
+                    </div>
+                    <div style={{ marginBottom: '12px' }}>
+                      <p style={{ margin: '4px 0', color: '#666' }}>
+                        <strong>Qty:</strong> {purchase.quantity}
+                      </p>
+                      <p style={{ margin: '4px 0', color: '#666' }}>
+                        <strong>Price/Unit:</strong> ₹{purchase.purchasePrice}
+                      </p>
+                      <p style={{ margin: '4px 0', color: '#666' }}>
+                        <strong>Total:</strong> ₹{Number(purchase.purchasePrice || 0) * Number(purchase.quantity || 0)}
+                      </p>
+                    </div>
+                    <p style={{ margin: '8px 0', fontSize: '12px', color: '#999' }}>
+                      {purchase.createdAt ? new Date(purchase.createdAt).toLocaleString() : ""}
+                    </p>
+                    <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                      <Button 
+                        type="primary" 
+                        size="small" 
+                        icon={<EyeOutlined />}
+                        onClick={() => handleView(purchase)}
+                      >
+                        View
+                      </Button>
+                      <Button 
+                        type="default" 
+                        size="small" 
+                        icon={<EditOutlined />}
+                        onClick={() => {
+                          setSelected(purchase);
+                          form.setFieldsValue({
+                            laptopId: purchase.laptopId,
+                            supplierName: purchase.supplierName,
+                            quantity: purchase.quantity,
+                            purchasePrice: purchase.purchasePrice,
+                          });
+                          setEditOpen(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                    </Space>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          )}
       </Card>
 
       <Modal
@@ -159,15 +214,14 @@ export default function Purchases() {
               <Descriptions.Item label="Quantity">
                 {selected.quantity}
               </Descriptions.Item>
-              <Descriptions.Item label="Purchase Price">
+              <Descriptions.Item label="Purchase Price Per Unit">
                 {selected.purchasePrice}
               </Descriptions.Item>
+              <Descriptions.Item label="Total Cost">
+                {Number(selected.purchasePrice || 0) * Number(selected.quantity || 0)}
+              </Descriptions.Item>
               <Descriptions.Item label="Purchased On">
-                {selected.createdAt
-                  ? selected.createdAt.toDate
-                    ? new Date(selected.createdAt.toDate()).toLocaleString()
-                    : new Date(selected.createdAt).toLocaleString()
-                  : ""}
+                {selected.createdAt ? new Date(selected.createdAt).toLocaleString() : ""}
               </Descriptions.Item>
             </Descriptions>
 
@@ -252,7 +306,7 @@ export default function Purchases() {
 
           <Form.Item
             name="purchasePrice"
-            label="Purchase Price"
+            label="Purchase Price Per Unit"
             rules={[{ required: true, message: "Please enter price" }]}
           >
             <InputNumber style={{ width: "100%" }} min={0} />

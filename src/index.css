@@ -1,7 +1,9 @@
-/* For Laptop modal vertical spacing */
 .custom-modal .ant-modal-content {
   margin-top: 20px;
   margin-bottom: 20px;
   border-radius: 12px;
   padding: 24px;
+}
+.ant-layout-content > div {
+  transition: opacity 0.2s ease-in-out;
 }

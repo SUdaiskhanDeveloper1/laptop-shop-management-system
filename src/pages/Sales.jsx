@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import DashboardLayout from "../components/Layout/DashboardLayout";
+import useCollectionRealtime from "../utils/useCollectionRealtime";
+import { useData } from "../context/DataContext";
+import { apiFetch } from "../api";
 import {
   Card,
   Table,
@@ -12,15 +15,16 @@ import {
   message,
   Popconfirm,
 } from "antd";
-import { EyeOutlined } from "@ant-design/icons";
-import useCollectionRealtime from "../utils/useCollectionRealtime";
-import { db } from "../firebase/config";
-import { doc, updateDoc } from "firebase/firestore";
+import { EyeOutlined,  } from "@ant-design/icons";
+
+
 import { addSale, deleteSale } from "../firebase/services";
 
 export default function Sales() {
   const { data: sales, loading: salesLoading } = useCollectionRealtime("sales");
-  const { data: laptops, loading: laptopsLoading } = useCollectionRealtime("laptops");
+  const { data: laptops, loading: laptopsLoading } =
+    useCollectionRealtime("laptops");
+  const { mutateCollection } = useData();
   const [selected, setSelected] = useState(null);
   const [viewOpen, setViewOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -31,17 +35,30 @@ export default function Sales() {
     try {
       const laptop = laptops.find((l) => l.id === values.laptopId);
       if (!laptop) throw new Error("Laptop not found");
+      if (laptop.quantity < values.quantity)
+        throw new Error("Not enough stock");
 
-      const costPerLaptop = laptop.purchasePrice / laptop.quantity;
+      const costPerLaptop =
+        (Number(laptop.purchasePrice) || 0) /
+        (Number(laptop.initialQuantity) || Number(laptop.quantity) || 1);
       const profitPer = values.sellingPrice - costPerLaptop;
       const profit = profitPer * values.quantity;
 
-      await addSale({
+      const saleData = {
         ...values,
-        prevQuantity: laptop.quantity,
         laptopGeneration: laptop.Generation,
         totalSale: values.sellingPrice * values.quantity,
         profit,
+        createdAt: new Date().toISOString(),
+      };
+
+      const saleId = await addSale(saleData);
+
+      // Update local state
+      mutateCollection("sales", "add", { ...saleData, id: saleId });
+      mutateCollection("laptops", "update", {
+        ...laptop,
+        quantity: laptop.quantity - values.quantity,
       });
 
       message.success("Sale recorded successfully");
@@ -49,7 +66,7 @@ export default function Sales() {
       form.resetFields();
     } catch (error) {
       console.error(error);
-      message.error("Error adding sale");
+      message.error(error.message || "Error adding sale");
     }
   }
 
@@ -58,16 +75,31 @@ export default function Sales() {
       const laptop = laptops.find((l) => l.id === values.laptopId);
       if (!laptop) throw new Error("Laptop not found");
 
-      const costPerLaptop = laptop.purchasePrice / laptop.quantity;
+      const costPerLaptop =
+        (Number(laptop.purchasePrice) || 0) /
+        (Number(laptop.initialQuantity) || Number(laptop.quantity) || 1);
       const profitPer = values.sellingPrice - costPerLaptop;
       const profit = profitPer * values.quantity;
 
-      const saleDoc = doc(db, "sales", selected.id);
-      await updateDoc(saleDoc, {
+      const updatedSale = {
         ...values,
         laptopGeneration: laptop.Generation,
         totalSale: values.sellingPrice * values.quantity,
         profit,
+      };
+
+      await apiFetch(`/sales/${selected.id}`, {
+        method: "PUT",
+        body: JSON.stringify(updatedSale),
+      });
+
+      // Update local state
+      mutateCollection("sales", "update", { ...updatedSale, id: selected.id });
+      // Note: Backend handles laptop quantity adjustment on PUT as well
+      const diff = values.quantity - selected.quantity;
+      mutateCollection("laptops", "update", {
+        ...laptop,
+        quantity: laptop.quantity - diff,
       });
 
       message.success("Sale updated successfully");
@@ -81,16 +113,19 @@ export default function Sales() {
 
   async function handleDelete(id, laptopId, qtySold) {
     try {
-      const laptopDoc = doc(db, "laptops", laptopId);
       const laptop = laptops.find((l) => l.id === laptopId);
 
+      await deleteSale(id);
+
+      // Update local state
+      mutateCollection("sales", "delete", { id });
       if (laptop) {
-        await updateDoc(laptopDoc, {
+        mutateCollection("laptops", "update", {
+          ...laptop,
           quantity: laptop.quantity + qtySold,
         });
       }
 
-      await deleteSale(id);
       message.success("Sale deleted successfully");
       setViewOpen(false);
     } catch (error) {
@@ -116,7 +151,17 @@ export default function Sales() {
       width: 60,
     },
     { title: "Laptop", dataIndex: "laptopGeneration" },
+    {
+      title: "Total Qty",
+      render: (_, record) => {
+        const laptop = laptops.find((l) => l.id === record.laptopId);
+        return laptop
+          ? laptop.initialQuantity || laptop.quantity + record.quantity
+          : "-";
+      },
+    },
     { title: "Sale Qty", dataIndex: "quantity" },
+
     { title: "Total Amount", dataIndex: "totalSale" },
     { title: "Total Profit", dataIndex: "profit" },
     {
@@ -124,9 +169,8 @@ export default function Sales() {
       dataIndex: "createdAt",
       render: (val) => {
         if (!val) return "";
-        if (val.toDate) return new Date(val.toDate()).toLocaleString();
         return new Date(val).toLocaleString();
-      }
+      },
     },
     {
       title: "Actions",
@@ -143,12 +187,23 @@ export default function Sales() {
       <Card
         title="Sales"
         extra={
-          <Button type="primary" disabled={salesLoading || laptopsLoading} onClick={() => setAddOpen(true)}>
+          <Button
+            type="primary"
+            disabled={salesLoading || laptopsLoading}
+            onClick={() => setAddOpen(true)}
+          >
             Add Sale
           </Button>
+          
         }
+
       >
-        <Table  loading={salesLoading || laptopsLoading} dataSource={sales || []} columns={columns} rowKey="id" />
+        <Table
+          loading={salesLoading || laptopsLoading}
+          dataSource={sales || []}
+          columns={columns}
+          rowKey="id"
+        />
       </Card>
 
       <Modal
@@ -257,7 +312,7 @@ export default function Sales() {
                     handleDelete(
                       selected.id,
                       selected.laptopId,
-                      selected.quantity
+                      selected.quantity,
                     )
                   }
                   okText="Yes"

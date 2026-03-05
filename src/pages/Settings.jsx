@@ -1,37 +1,21 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../components/Layout/DashboardLayout";
 import { Card, Form, Input, Button, message, Typography } from "antd";
-import { auth, db } from "../firebase/config";
-import {
-  updatePassword,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-} from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { apiFetch } from "../api";
+import { useAuth } from "../context/AuthContext";
 
 const { Text } = Typography;
 
 export default function Settings() {
   const [form] = Form.useForm();
+  const { user } = useAuth();
   const [lastChanged, setLastChanged] = useState(null);
 
   useEffect(() => {
-    async function fetchLastChange() {
-      const user = auth.currentUser;
-      if (!user) return;
-      const userRef = doc(db, "users", user.uid);
-      const snap = await getDoc(userRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data.lastPasswordChange) {
-          setLastChanged(
-            new Date(data.lastPasswordChange.toDate()).toLocaleString()
-          );
-        }
-      }
+    if (user && user.lastPasswordChange) {
+      setLastChanged(new Date(user.lastPasswordChange).toLocaleString());
     }
-    fetchLastChange();
-  }, []);
+  }, [user]);
 
   async function onFinish(values) {
     const { oldPassword, newPassword, confirmPassword } = values;
@@ -41,32 +25,20 @@ export default function Settings() {
     }
 
     try {
-      const user = auth.currentUser;
-      if (!user) return message.error("Not logged in");
-
-      const credential = EmailAuthProvider.credential(user.email, oldPassword);
-      await reauthenticateWithCredential(user, credential);
-
-      await updatePassword(user, newPassword);
-
-      const userRef = doc(db, "users", user.uid);
-      await setDoc(
-        userRef,
-        {
-          lastPasswordChange: serverTimestamp(),
-        },
-        { merge: true }
-      );
-
-      setLastChanged(new Date().toLocaleString());
+      const response = await apiFetch('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ oldPassword, newPassword })
+      });
+      
+      setLastChanged(new Date(response.lastPasswordChange).toLocaleString());
       message.success("Password updated successfully");
       form.resetFields();
     } catch (e) {
       console.error(e);
-      if (e.code === "auth/wrong-password") {
+      if (e.message === "auth/wrong-password") {
         message.error("Incorrect old password");
       } else {
-        message.error("Error updating password");
+        message.error("Error updating password: " + e.message);
       }
     }
   }

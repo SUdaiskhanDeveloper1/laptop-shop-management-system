@@ -1,5 +1,8 @@
 import React, { useState } from "react";
+import { apiFetch } from '../api';
 import DashboardLayout from "../components/Layout/DashboardLayout";
+import useCollectionRealtime from "../utils/useCollectionRealtime";
+import { useData } from "../context/DataContext";
 import {
   Card,
   Table,
@@ -14,18 +17,10 @@ import {
   DatePicker,
 } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
-import useCollectionRealtime from "../utils/useCollectionRealtime";
-import {
-  addDoc,
-  collection,
-  doc,
-  updateDoc,
-  deleteDoc,
-} from "firebase/firestore";
-import { db } from "../firebase/config";
 
 export default function Expenses() {
   const { data: expenses, loading: expensesLoading } = useCollectionRealtime("expenses");
+  const { mutateCollection } = useData();
   const [openAdd, setOpenAdd] = useState(false);
   const [viewModal, setViewModal] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
@@ -35,11 +30,18 @@ export default function Expenses() {
 
   async function onCreate(values) {
     try {
-      await addDoc(collection(db, "expenses"), {
+      const payload = {
         ...values,
-        date: values.date.format("YYYY-MM-DD"), 
+        date: values.date.format("YYYY-MM-DD"),
+        createdAt: new Date().toISOString()
+      };
+      const res = await apiFetch(`/expenses`, { 
+        method: 'POST', 
+        body: JSON.stringify(payload) 
       });
 
+      mutateCollection('expenses', 'add', { ...payload, id: res.id });
+      
       message.success("Expense added successfully");
       setOpenAdd(false);
       form.resetFields();
@@ -48,13 +50,20 @@ export default function Expenses() {
       message.error("Error adding expense");
     }
   }
+
   async function onUpdate(values) {
     try {
-      const expenseDoc = doc(db, "expenses", selectedExpense.id);
-      await updateDoc(expenseDoc, {
+      const payload = {
         ...values,
         date: values.date.format("YYYY-MM-DD"),
+      };
+      await apiFetch(`/expenses/${selectedExpense.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
       });
+      
+      mutateCollection('expenses', 'update', { ...payload, id: selectedExpense.id });
+      
       message.success("Expense updated successfully");
       setIsEditing(false);
       setSelectedExpense(null);
@@ -68,7 +77,8 @@ export default function Expenses() {
 
   const handleDelete = async (id) => {
     try {
-      await deleteDoc(doc(db, "expenses", id));
+      await apiFetch(`/expenses/${id}`, { method: 'DELETE' });
+      mutateCollection('expenses', 'delete', { id });
       message.success("Expense deleted successfully");
       setViewModal(false);
       setSelectedExpense(null);

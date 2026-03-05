@@ -1,38 +1,44 @@
 import React, { useState } from 'react'
 import { Card, Form, Input, Button, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
-import { signInWithEmailAndPassword } from 'firebase/auth'
-import { auth } from '../firebase/config'
+import { apiFetch } from '../api'
 import { MailOutlined, LockOutlined, LoginOutlined } from '@ant-design/icons'
+import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const [messageApi, contextHolder] = message.useMessage() 
+  const { login } = useAuth()
 
   const onFinish = async (values) => {
     setLoading(true)
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password)
+      const data = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          email: values.identifier, 
+          id: values.identifier, 
+          username: values.identifier, 
+          password: values.password 
+        })
+      })
+      
+      login(data.user, data.token)
+
       messageApi.open({
         type: 'success',
         content: '✅ Logged in successfully!',
-        // duration: 1,
       })
-      setTimeout(() => navigate('/dashboard'), 2000)
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000)
     } catch (error) {
-      console.error('Login Error:', error.code)
-
-      let errorMsg = 'Email or password is incorrect'
-      if (error.code === 'auth/user-not-found') errorMsg = ' No user found with this email'
-      else if (error.code === 'auth/wrong-password') errorMsg = ' Incorrect password'
-      else if (error.code === 'auth/invalid-email') errorMsg = 'Invalid email format'
-
-     
+      console.error('Login Error:', error.message)
       messageApi.open({
         type: 'error',
-        content: errorMsg,
-        duration: 1,
+        content: error.message || 'Login failed. Please check if backend is running.',
+        duration: 3,
       })
     } finally {
       setLoading(false)
@@ -77,13 +83,13 @@ export default function Login() {
 
         <Form layout="vertical" onFinish={onFinish}>
           <Form.Item
-            name="email"
-            label={<span style={{ fontWeight: 500 }}>Email</span>}
-            rules={[{ required: true, message: 'Please enter your email' }]}
+            name="identifier"
+            label={<span style={{ fontWeight: 500 }}>Email or ID</span>}
+            rules={[{ required: true, message: 'Please enter your email or ID' }]}
           >
             <Input
               prefix={<MailOutlined style={{ color: '#5563DE' }} />}
-              placeholder="Enter your email"
+              placeholder="Enter your email or ID"
               size="large"
               style={{
                 borderRadius: 8,
@@ -93,8 +99,8 @@ export default function Login() {
 
           <Form.Item
             name="password"
-            label={<span style={{ fontWeight: 500 }}>Password</span>}
-            rules={[{ required: true, message: 'Please enter your password' }]}
+            label={<span style={{ fontWeight: 500 }}>Password </span>}
+            rules={[{ required: false }]}
           >
             <Input.Password
               prefix={<LockOutlined style={{ color: '#5563DE' }} />}

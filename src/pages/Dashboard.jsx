@@ -13,21 +13,8 @@ export default function Dashboard() {
   const todayStart = dayjs().startOf("day");
   const weekStart = dayjs().startOf("week");
 
-  const soldCountByLaptop = sales.reduce((acc, sale) => {
-    const id = sale.laptopId || sale.laptopName;
-    const qty = Number(sale.quantity) || 0;
-    acc[id] = (acc[id] || 0) + qty;
-    return acc;
-  }, {});
-
-  const laptopsWithAvailableQty = laptops.map((laptop) => {
-    const soldQty = soldCountByLaptop[laptop.id || laptop.name] || 0;
-    const availableQty = (Number(laptop.quantity) || 0) - soldQty;
-    return { ...laptop, availableQty };
-  });
-
-  const totalAvailableStock = laptopsWithAvailableQty.reduce(
-    (sum, l) => sum + (Number(l.availableQty) || 0),
+  const totalAvailableStock = laptops.reduce(
+    (sum, l) => sum + (Number(l.quantity) || 0),
     0,
   );
 

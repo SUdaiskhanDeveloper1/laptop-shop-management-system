@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import { apiFetch } from '../api';
+import useCollectionRealtime from "../utils/useCollectionRealtime";
+import { useData } from "../context/DataContext";
 import DashboardLayout from "../components/Layout/DashboardLayout";
 import {
   Card,
@@ -9,22 +12,14 @@ import {
   Input,
   message,
   Space,
-    DatePicker, 
+  DatePicker, 
   Popconfirm,
 } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
-import useCollectionRealtime from "../utils/useCollectionRealtime";
-import {
-  addDoc,
-  collection,
-  doc,
-  updateDoc,
-  deleteDoc,
-} from "firebase/firestore";
-import { db } from "../firebase/config";
 
 export default function Suppliers() {
   const { data: suppliersRaw, loading: suppliersLoading } = useCollectionRealtime("suppliers");
+  const { mutateCollection } = useData();
   const [openAdd, setOpenAdd] = useState(false);
   const [viewModal, setViewModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
@@ -36,17 +31,25 @@ export default function Suppliers() {
   const pageSize = 10;
 
   const suppliers = [...(suppliersRaw || [])].sort((a, b) => {
-    const timeA = a.createdAt?.seconds || 0;
-    const timeB = b.createdAt?.seconds || 0;
+    const timeA = new Date(a.createdAt).getTime() || 0;
+    const timeB = new Date(b.createdAt).getTime() || 0;
     return timeB - timeA; 
   });
 
   async function onCreate(values) {
     try {
-      await addDoc(collection(db, "suppliers"), {
+      const payload = {
         ...values,
-      date: values.date.format("YYYY-MM-DD"),
+        date: values.date.format("YYYY-MM-DD"),
+        createdAt: new Date().toISOString()
+      };
+      const res = await apiFetch(`/suppliers`, { 
+        method: 'POST', 
+        body: JSON.stringify(payload) 
       });
+      
+      mutateCollection('suppliers', 'add', { ...payload, id: res.id });
+      
       message.success("Supplier added successfully");
       setOpenAdd(false);
       form.resetFields();
@@ -58,8 +61,13 @@ export default function Suppliers() {
 
   async function onUpdate(values) {
     try {
-      const supplierDoc = doc(db, "suppliers", selectedSupplier.id);
-      await updateDoc(supplierDoc, values);
+      await apiFetch(`/suppliers/${selectedSupplier.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(values)
+      });
+      
+      mutateCollection('suppliers', 'update', { ...values, id: selectedSupplier.id });
+      
       message.success("Supplier updated successfully");
       setIsEditing(false);
       setSelectedSupplier(null);
@@ -73,7 +81,8 @@ export default function Suppliers() {
 
   const handleDelete = async (id) => {
     try {
-      await deleteDoc(doc(db, "suppliers", id));
+      await apiFetch(`/suppliers/${id}`, { method: 'DELETE' });
+      mutateCollection('suppliers', 'delete', { id });
       message.success("Supplier deleted successfully");
       setViewModal(false);
       setSelectedSupplier(null);
@@ -84,7 +93,7 @@ export default function Suppliers() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <Card
         title="Suppliers"
         extra={
@@ -230,6 +239,8 @@ export default function Suppliers() {
           </Form>
         )}
       </Modal>
-    </DashboardLayout>
+      <DashboardLayout />
+    </>
   );
 }
+  
